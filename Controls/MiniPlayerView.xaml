@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MusicPlayer.Controls.MiniPlayerView"
+             IsVisible="False">
+
+    <!--
+        Barra de reproduccion siempre a mano en las pantallas de biblioteca. Al tocarla se abre la
+        pantalla completa; los botones de transporte funcionan sin salir de donde estas.
+    -->
+    <Border Style="{StaticResource Card}" Margin="8,0,8,8">
+        <Grid RowDefinitions="Auto,*" RowSpacing="0">
+
+            <ProgressBar x:Name="Progress"
+                         Grid.Row="0"
+                         HeightRequest="3"
+                         ProgressColor="{StaticResource Primary}" />
+
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="52,*,48,56,48"
+                  ColumnSpacing="4"
+                  Padding="8,6">
+
+                <!-- Caratula: el marcador queda detras y asoma cuando el album no tiene imagen. -->
+                <Border Grid.Column="0" Style="{StaticResource ArtworkPlaceholder}" WidthRequest="44" HeightRequest="44">
+                    <Grid>
+                        <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="8" />
+                        <Image x:Name="Artwork" Aspect="AspectFill" />
+                    </Grid>
+                </Border>
+
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                    <Label x:Name="TitleLabel" Style="{StaticResource ItemTitle}" />
+                    <Label x:Name="ArtistLabel" Style="{StaticResource ItemSubtitle}" />
+                </VerticalStackLayout>
+
+                <ImageButton Grid.Column="2"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_previous.png"
+                             Clicked="OnPreviousClicked" />
+
+                <ImageButton Grid.Column="3"
+                             x:Name="PlayPauseButton"
+                             Style="{StaticResource TransportPrimaryButton}"
+                             WidthRequest="48"
+                             HeightRequest="48"
+                             CornerRadius="24"
+                             Padding="12"
+                             Source="ic_play_w.png"
+                             Clicked="OnPlayPauseClicked" />
+
+                <ImageButton Grid.Column="4"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_next.png"
+                             Clicked="OnNextClicked" />
+
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnOpenNowPlaying" />
+                </Grid.GestureRecognizers>
+            </Grid>
+        </Grid>
+    </Border>
+
+</ContentView>

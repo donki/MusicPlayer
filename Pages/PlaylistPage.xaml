@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MusicPlayer.Models"
+             xmlns:controls="clr-namespace:MusicPlayer.Controls"
+             x:Class="MusicPlayer.Pages.PlaylistPage">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <CollectionView x:Name="SongsView" Grid.Row="0" SelectionMode="None" Margin="8,0">
+
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="4,8" Spacing="10">
+                    <Label x:Name="PlaylistNameLabel" FontSize="22" FontAttributes="Bold" />
+                    <Label x:Name="PlaylistCountLabel" Style="{StaticResource HintText}" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                x:Name="PlayAllButton"
+                                Style="{StaticResource PrimaryButton}"
+                                ImageSource="ic_play_w.png"
+                                ContentLayout="Left,8"
+                                Clicked="OnPlayAllClicked" />
+                        <Button Grid.Column="1"
+                                x:Name="ShuffleAllButton"
+                                Style="{StaticResource OutlineButton}"
+                                ImageSource="ic_shuffle.png"
+                                ContentLayout="Left,8"
+                                Clicked="OnShuffleAllClicked" />
+                    </Grid>
+
+                    <Label x:Name="EmptyMessage" Style="{StaticResource HintText}" IsVisible="False" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:SongRow">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,6">
+                        <Grid ColumnDefinitions="48,*,Auto,48" ColumnSpacing="8" Padding="8,6">
+                            <Border Grid.Column="0" Style="{StaticResource ArtworkPlaceholder}" WidthRequest="44" HeightRequest="44">
+                                <Grid>
+                                    <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="8" />
+                                    <Image Source="{Binding Artwork}" Aspect="AspectFill" />
+                                </Grid>
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                                <Label Text="{Binding Title}" Style="{StaticResource ItemTitle}" />
+                                <Label Text="{Binding Subtitle}" Style="{StaticResource ItemSubtitle}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="{Binding Duration}" Style="{StaticResource ItemSubtitle}" VerticalOptions="Center" />
+                            <ImageButton Grid.Column="3"
+                                         Style="{StaticResource RowIconButton}"
+                                         Source="ic_more.png"
+                                         Clicked="OnSongMenuClicked" />
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnSongTapped" />
+                            </Grid.GestureRecognizers>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <controls:MiniPlayerView x:Name="MiniPlayer" Grid.Row="1" />
+    </Grid>
+
+</ContentPage>

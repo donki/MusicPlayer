@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MusicPlayer.Pages.NowPlayingPage">
+
+    <Grid>
+
+        <!-- Reproductor -->
+        <Grid x:Name="PlayerLayout" RowDefinitions="*,Auto,Auto,Auto,Auto" Padding="20,12,20,20" RowSpacing="12">
+
+            <!-- Caratula -->
+            <Border Grid.Row="0" Style="{StaticResource ArtworkPlaceholder}" HorizontalOptions="Center">
+                <Grid>
+                    <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="70" />
+                    <Image x:Name="Artwork" Aspect="AspectFill" />
+                </Grid>
+            </Border>
+
+            <!-- Titulo y grupo -->
+            <VerticalStackLayout Grid.Row="1" Spacing="4">
+                <Label x:Name="TitleLabel" FontSize="22" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                <Label x:Name="ArtistLabel" Style="{StaticResource BodyText}" LineBreakMode="TailTruncation" />
+                <Label x:Name="AlbumLabel" Style="{StaticResource HintText}" LineBreakMode="TailTruncation" />
+            </VerticalStackLayout>
+
+            <!-- Barra de progreso con tiempo reproducido / duracion -->
+            <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="0">
+                <Slider x:Name="ProgressSlider"
+                        Grid.Row="0"
+                        Minimum="0"
+                        Maximum="1"
+                        DragStarted="OnSeekStarted"
+                        DragCompleted="OnSeekCompleted" />
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+                    <Label Grid.Column="0" x:Name="ElapsedLabel" Style="{StaticResource TimeText}" HorizontalTextAlignment="Start" />
+                    <Label Grid.Column="1" x:Name="QueueLabel" Style="{StaticResource HintText}" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                    <Label Grid.Column="2" x:Name="DurationLabel" Style="{StaticResource TimeText}" HorizontalTextAlignment="End" />
+                </Grid>
+            </Grid>
+
+            <!-- Transporte -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,*" ColumnSpacing="16" HorizontalOptions="Center">
+                <ImageButton Grid.Column="1"
+                             Style="{StaticResource TransportButton}"
+                             Source="ic_previous.png"
+                             Clicked="OnPreviousClicked" />
+                <ImageButton Grid.Column="2"
+                             x:Name="PlayPauseButton"
+                             Style="{StaticResource TransportPrimaryButton}"
+                             Source="ic_play_w.png"
+                             Clicked="OnPlayPauseClicked" />
+                <ImageButton Grid.Column="3"
+                             Style="{StaticResource TransportButton}"
+                             Source="ic_next.png"
+                             Clicked="OnNextClicked" />
+            </Grid>
+
+            <!-- Modos y acciones sobre la cancion -->
+            <Grid Grid.Row="4" ColumnDefinitions="*,*,*,*">
+                <ImageButton Grid.Column="0"
+                             x:Name="ShuffleButton"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_shuffle.png"
+                             Clicked="OnShuffleClicked" />
+                <ImageButton Grid.Column="1"
+                             x:Name="RepeatButton"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_repeat.png"
+                             Clicked="OnRepeatClicked" />
+                <ImageButton Grid.Column="2"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_playlist_add.png"
+                             Clicked="OnAddToPlaylistClicked" />
+                <ImageButton Grid.Column="3"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_delete.png"
+                             Clicked="OnDeleteClicked" />
+            </Grid>
+        </Grid>
+
+        <!-- Nada en reproduccion -->
+        <VerticalStackLayout x:Name="EmptyPanel"
+                             IsVisible="False"
+                             Padding="32"
+                             Spacing="12"
+                             VerticalOptions="Center">
+            <Image Source="ic_artwork.png" WidthRequest="72" HeightRequest="72" HorizontalOptions="Center" />
+            <Label x:Name="EmptyTitle" Style="{StaticResource CardTitle}" HorizontalTextAlignment="Center" />
+            <Label x:Name="EmptyMessage" Style="{StaticResource HintText}" HorizontalTextAlignment="Center" />
+            <Button x:Name="GoToLibraryButton"
+                    Style="{StaticResource PrimaryButton}"
+                    ImageSource="ic_songs_w.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnGoToLibraryClicked" />
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentPage>

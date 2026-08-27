@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:pages="clr-namespace:MusicPlayer.Pages"
+       x:Class="MusicPlayer.AppShell"
+       FlyoutBehavior="Flyout"
+       FlyoutWidth="280"
+       FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource PageBackgroundLight}, Dark={StaticResource PageBackgroundDark}}"
+       Shell.BackgroundColor="{StaticResource Primary}"
+       Shell.ForegroundColor="{StaticResource OnPrimary}"
+       Shell.TitleColor="{StaticResource OnPrimary}"
+       Shell.DisabledColor="{StaticResource OnPrimaryMuted}"
+       Shell.UnselectedColor="{StaticResource OnPrimaryMuted}">
+
+    <!-- Cabecera del menu: logo + nombre y nada mas (constitucion E.7). -->
+    <Shell.FlyoutHeader>
+        <Grid BackgroundColor="{StaticResource Primary}" HeightRequest="150" Padding="20,44,20,16">
+            <VerticalStackLayout VerticalOptions="End" Spacing="6">
+                <Image Source="app_logo.png" WidthRequest="52" HeightRequest="52" HorizontalOptions="Start" />
+                <Label x:Name="MenuAppName"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource OnPrimary}" />
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <!-- Contenido del menu: cada fila con su icono a la izquierda (constitucion A.9 y E.7). -->
+    <Shell.FlyoutContent>
+        <ScrollView>
+            <VerticalStackLayout Padding="0,8" Spacing="0">
+
+                <Grid ColumnDefinitions="26,*" Padding="20,0" HeightRequest="52" ColumnSpacing="16">
+                    <Image Grid.Column="0" Source="ic_songs.png" WidthRequest="24" HeightRequest="24" VerticalOptions="Center" />
+                    <Label Grid.Column="1" x:Name="MenuLibraryLabel" VerticalOptions="Center" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnLibraryTapped" /></Grid.GestureRecognizers>
+                </Grid>
+
+                <Grid ColumnDefinitions="26,*" Padding="20,0" HeightRequest="52" ColumnSpacing="16">
+                    <Image Grid.Column="0" Source="ic_play.png" WidthRequest="24" HeightRequest="24" VerticalOptions="Center" />
+                    <Label Grid.Column="1" x:Name="MenuNowPlayingLabel" VerticalOptions="Center" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnNowPlayingTapped" /></Grid.GestureRecognizers>
+                </Grid>
+
+                <Grid ColumnDefinitions="26,*" Padding="20,0" HeightRequest="52" ColumnSpacing="16">
+                    <Image Grid.Column="0" Source="ic_settings.png" WidthRequest="24" HeightRequest="24" VerticalOptions="Center" />
+                    <Label Grid.Column="1" x:Name="MenuSettingsLabel" VerticalOptions="Center" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnSettingsTapped" /></Grid.GestureRecognizers>
+                </Grid>
+
+                <Grid ColumnDefinitions="26,*" Padding="20,0" HeightRequest="52" ColumnSpacing="16">
+                    <Image Grid.Column="0" Source="ic_info.png" WidthRequest="24" HeightRequest="24" VerticalOptions="Center" />
+                    <Label Grid.Column="1" x:Name="MenuAboutLabel" VerticalOptions="Center" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Grid.GestureRecognizers><TapGestureRecognizer Tapped="OnAboutTapped" /></Grid.GestureRecognizers>
+                </Grid>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Shell.FlyoutContent>
+
+    <!-- Pie del menu: version de la app (constitucion E.7). -->
+    <Shell.FlyoutFooter>
+        <Grid Padding="20,12">
+            <Label x:Name="VersionLabel"
+                   Style="{StaticResource HintText}"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+        </Grid>
+    </Shell.FlyoutFooter>
+
+    <!-- Rutas de navegacion. El menu visual lo pinta FlyoutContent (constitucion A.9). -->
+    <ShellContent Route="LibraryPage" ContentTemplate="{DataTemplate pages:LibraryPage}" />
+    <ShellContent Route="NowPlayingPage" ContentTemplate="{DataTemplate pages:NowPlayingPage}" />
+    <ShellContent Route="SettingsPage" ContentTemplate="{DataTemplate pages:SettingsPage}" />
+    <ShellContent Route="AboutPage" ContentTemplate="{DataTemplate pages:AboutPage}" />
+
+</Shell>

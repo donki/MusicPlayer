@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Declara ante Android Auto que esta aplicacion es de medios. El coche solo muestra las apps que
+    traen este descriptor y que exponen un MediaBrowserService (ver MusicService.cs).
+-->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>
