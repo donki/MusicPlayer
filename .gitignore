@@ -1,0 +1,28 @@
+
+.vs/
+
+bin/
+
+*.tmp
+
+obj/
+
+.kiro/
+
+hiker-433118-98861f2881fa.json
+
+keystore.password.txt
+
+# Scripts que contienen la contrasena del keystore en texto plano (no subir)
+Sign.bat
+build_and_sign.ps1
+
+# Artefactos de firma generados
+*-Signed.aab
+*-Signed.apk
+txtreader-mumu.apk
+
+# Material de firma y logs (no versionar)
+socratic.keystore
+*.keystore
+*.log

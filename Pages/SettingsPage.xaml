@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MusicPlayer.Pages.SettingsPage">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <!-- Biblioteca -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="20,16" Spacing="12">
+                    <Label x:Name="LibraryTitle" Style="{StaticResource CardTitle}" />
+
+                    <Button x:Name="RescanButton"
+                            Style="{StaticResource OutlineButton}"
+                            ImageSource="ic_refresh.png"
+                            ContentLayout="Left,8"
+                            Clicked="OnRescanClicked" />
+                    <Label x:Name="RescanHint" Style="{StaticResource HintText}" />
+
+                    <BoxView Style="{StaticResource Separator}" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0" x:Name="ComposerLabel" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                        <Switch Grid.Column="1" x:Name="ComposerSwitch" Toggled="OnComposerToggled" VerticalOptions="Center" />
+                    </Grid>
+                    <Label x:Name="ComposerHint" Style="{StaticResource HintText}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Informacion en linea -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="20,16" Spacing="12">
+                    <Label x:Name="OnlineTitle" Style="{StaticResource CardTitle}" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0" x:Name="OnlineLabel" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                        <Switch Grid.Column="1" x:Name="OnlineSwitch" Toggled="OnOnlineToggled" VerticalOptions="Center" />
+                    </Grid>
+                    <Label x:Name="OnlineHint" Style="{StaticResource HintText}" />
+
+                    <Button x:Name="ClearCacheButton"
+                            Style="{StaticResource DangerButton}"
+                            ImageSource="ic_delete_danger.png"
+                            ContentLayout="Left,8"
+                            Clicked="OnClearCacheClicked" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Android Auto -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="20,16" Spacing="10">
+                    <Label x:Name="AutoTitle" Style="{StaticResource CardTitle}" />
+                    <Label x:Name="AutoHint" Style="{StaticResource HintText}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Idioma -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="20,16" Spacing="12">
+                    <Label x:Name="LanguageTitle" Style="{StaticResource CardTitle}" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0" x:Name="SpanishButton" Style="{StaticResource LanguageButton}" Clicked="OnSpanishClicked" />
+                        <Button Grid.Column="1" x:Name="EnglishButton" Style="{StaticResource LanguageButton}" Clicked="OnEnglishClicked" />
+                    </Grid>
+
+                    <Label x:Name="LanguageHint" Style="{StaticResource HintText}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

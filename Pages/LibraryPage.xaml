@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MusicPlayer.Models"
+             xmlns:controls="clr-namespace:MusicPlayer.Controls"
+             x:Class="MusicPlayer.Pages.LibraryPage">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem x:Name="RescanToolbarItem" IconImageSource="ic_refresh_w.png" Clicked="OnRescanClicked" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Busqueda -->
+        <Border Grid.Row="0" Style="{StaticResource Card}" Margin="12,12,12,6">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="0" Padding="8,0">
+                <Image Grid.Column="0" Source="ic_search.png" WidthRequest="20" HeightRequest="20" Margin="8,0" />
+                <Entry Grid.Column="1" x:Name="SearchEntry" TextChanged="OnSearchTextChanged" ReturnType="Search" />
+            </Grid>
+        </Border>
+
+        <!-- Selector de seccion: iconos, no palabras (constitucion 5.1) -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="12,0,12,6">
+            <ImageButton Grid.Column="0" x:Name="ArtistsTabButton" Source="ic_artists.png" Clicked="OnArtistsTabClicked" />
+            <ImageButton Grid.Column="1" x:Name="SongsTabButton" Source="ic_songs.png" Clicked="OnSongsTabClicked" />
+            <ImageButton Grid.Column="2" x:Name="PlaylistsTabButton" Source="ic_playlists.png" Clicked="OnPlaylistsTabClicked" />
+        </Grid>
+
+        <!-- Contenido -->
+        <Grid Grid.Row="2">
+
+            <!-- Grupos y compositores -->
+            <CollectionView x:Name="ArtistsView"
+                            SelectionMode="None"
+                            Margin="8,0">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="8" VerticalItemSpacing="8" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ArtistRow">
+                        <Border Style="{StaticResource Card}">
+                            <VerticalStackLayout Padding="10" Spacing="8">
+                                <Border Style="{StaticResource ArtworkPlaceholder}" HeightRequest="140">
+                                    <Grid>
+                                        <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="34" />
+                                        <Image Source="{Binding Image}" Aspect="AspectFill" />
+                                    </Grid>
+                                </Border>
+                                <Label Text="{Binding Name}" Style="{StaticResource ItemTitle}" />
+                                <Label Text="{Binding Subtitle}" Style="{StaticResource ItemSubtitle}" />
+                            </VerticalStackLayout>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnArtistTapped" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Canciones -->
+            <CollectionView x:Name="SongsView"
+                            SelectionMode="None"
+                            IsVisible="False"
+                            Margin="8,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:SongRow">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,6">
+                            <Grid ColumnDefinitions="48,*,Auto,48" ColumnSpacing="8" Padding="8,6">
+                                <Border Grid.Column="0" Style="{StaticResource ArtworkPlaceholder}" WidthRequest="44" HeightRequest="44">
+                                    <Grid>
+                                        <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="8" />
+                                        <Image Source="{Binding Artwork}" Aspect="AspectFill" />
+                                    </Grid>
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                                    <Label Text="{Binding Title}" Style="{StaticResource ItemTitle}" />
+                                    <Label Text="{Binding Subtitle}" Style="{StaticResource ItemSubtitle}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="2" Text="{Binding Duration}" Style="{StaticResource ItemSubtitle}" VerticalOptions="Center" />
+                                <ImageButton Grid.Column="3"
+                                             Style="{StaticResource RowIconButton}"
+                                             Source="ic_more.png"
+                                             Clicked="OnSongMenuClicked" />
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnSongTapped" />
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Listas de reproduccion -->
+            <Grid x:Name="PlaylistsContainer" IsVisible="False" RowDefinitions="*,Auto">
+                <VerticalStackLayout Grid.Row="0"
+                                     x:Name="NoPlaylistsPanel"
+                                     IsVisible="False"
+                                     Padding="32"
+                                     Spacing="10"
+                                     VerticalOptions="Center">
+                    <Image Source="ic_playlists.png" WidthRequest="56" HeightRequest="56" HorizontalOptions="Center" />
+                    <Label x:Name="NoPlaylistsTitle" Style="{StaticResource CardTitle}" HorizontalTextAlignment="Center" />
+                    <Label x:Name="NoPlaylistsMessage" Style="{StaticResource HintText}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+
+                <CollectionView x:Name="PlaylistsView" Grid.Row="0" SelectionMode="None" Margin="8,0">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:PlaylistRow">
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,6">
+                                <Grid ColumnDefinitions="48,*,48" ColumnSpacing="8" Padding="8,6">
+                                    <Image Grid.Column="0" Source="ic_playlists.png" WidthRequest="26" HeightRequest="26" />
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                                        <Label Text="{Binding Name}" Style="{StaticResource ItemTitle}" />
+                                        <Label Text="{Binding Subtitle}" Style="{StaticResource ItemSubtitle}" />
+                                    </VerticalStackLayout>
+                                    <ImageButton Grid.Column="2"
+                                                 Style="{StaticResource RowIconButton}"
+                                                 Source="ic_more.png"
+                                                 Clicked="OnPlaylistMenuClicked" />
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPlaylistTapped" />
+                                    </Grid.GestureRecognizers>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Button Grid.Row="1"
+                        x:Name="NewPlaylistButton"
+                        Style="{StaticResource PrimaryButton}"
+                        ImageSource="ic_add_w.png"
+                        ContentLayout="Left,8"
+                        Margin="12,8"
+                        Clicked="OnNewPlaylistClicked" />
+            </Grid>
+
+            <!-- Estado vacio / permiso / carga -->
+            <VerticalStackLayout x:Name="StatusPanel"
+                                 IsVisible="False"
+                                 Padding="32"
+                                 Spacing="12"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center">
+                <ActivityIndicator x:Name="StatusSpinner" IsRunning="False" IsVisible="False" HeightRequest="36" />
+                <Image Source="ic_artwork.png" WidthRequest="64" HeightRequest="64" HorizontalOptions="Center" />
+                <Label x:Name="StatusTitle" Style="{StaticResource CardTitle}" HorizontalTextAlignment="Center" />
+                <Label x:Name="StatusMessage" Style="{StaticResource HintText}" HorizontalTextAlignment="Center" />
+                <Button x:Name="StatusActionButton"
+                        Style="{StaticResource PrimaryButton}"
+                        IsVisible="False"
+                        Clicked="OnStatusActionClicked" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <controls:MiniPlayerView x:Name="MiniPlayer" Grid.Row="3" />
+    </Grid>
+
+</ContentPage>

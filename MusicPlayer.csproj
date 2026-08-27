@@ -1,0 +1,105 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-android36.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>MusicPlayer</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Display name -->
+    <ApplicationTitle>Music Player</ApplicationTitle>
+
+    <!-- App Identifier (constitucion A.2: com.socratic.[nombre-aplicacion]) -->
+    <ApplicationId>com.socratic.musicplayer</ApplicationId>
+
+    <!-- Versions (constitucion A.4: ambos valores en sincronia, esquema de fecha) -->
+    <ApplicationDisplayVersion>2026.08.27.0</ApplicationDisplayVersion>
+    <ApplicationVersion>202608270</ApplicationVersion>
+
+    <AcceptAndroidSDKLicenses>true</AcceptAndroidSDKLicenses>
+
+    <!-- Package information -->
+    <PackageId>MusicPlayer</PackageId>
+    <Title>Music Player</Title>
+    <Product>Music Player</Product>
+    <Description>Reproductor de musica para Android: reproduce la musica del dispositivo agrupada por grupo o compositor, con listas de reproduccion y soporte de Android Auto.</Description>
+    <Copyright>Copyright © 2026 Socratic</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>music;player;audio;androidauto;android;maui;dotnet</PackageTags>
+    <Authors>Socratic</Authors>
+    <Company>Socratic</Company>
+
+    <!-- Platform versions -->
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+
+    <!-- Android specific -->
+    <TargetSdkVersion>36</TargetSdkVersion>
+    <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
+    <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
+
+    <AssemblyVersion>2026.08.27.0</AssemblyVersion>
+    <FileVersion>2026.08.27.0</FileVersion>
+  </PropertyGroup>
+
+  <!--
+    Ensamblados embebidos en cualquier despliegue, Debug y Release (constitucion A.7).
+    Con Fast Deployment los ensamblados no viajan en el APK y la app aborta al arrancar
+    con "No assemblies found".
+  -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+  </PropertyGroup>
+
+  <!--
+    Release: se recorta el SDK, no la aplicacion. El servicio de reproduccion y el callback de
+    MediaSession solo los instancia Android por reflexion (Android Auto arranca el proceso sin
+    que ningun codigo nuestro los referencie), asi que un recorte agresivo los eliminaria.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidLinkMode>SdkOnly</AndroidLinkMode>
+    <RunAOTCompilation>false</RunAOTCompilation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Icono de aplicacion: nota musical blanca sobre gradiente indigo (constitucion E.6). -->
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#3525CD" />
+
+    <!-- Splash nativo (constitucion E.8): solo el glifo, sobre el indigo de marca. -->
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#3525CD" BaseSize="180,180" />
+
+    <!-- Iconografia vectorial: MAUI rasteriza los SVG por densidad (constitucion A.9). -->
+    <MauiImage Include="Resources\Images\*" />
+
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.2" />
+    <!--
+      androidx.media: MediaSessionCompat y MediaBrowserServiceCompat, que son la interfaz
+      obligatoria para que Android Auto vea la biblioteca y controle la reproduccion.
+      Licencia MIT AND Apache-2.0 (constitucion 4). Ver THIRD-PARTY-NOTICES.md.
+    -->
+    <PackageReference Include="Xamarin.AndroidX.Media" Version="1.8.0.1" />
+    <!--
+      androidx.media arrastra AndroidX.Core 1.19, mientras que MAUI trae Core.Ktx 1.16. Las dos
+      versiones definen androidx.core.animation.AnimatorKt y el empaquetado falla con "Type ...
+      is defined multiple times". Se fijan a la misma version para que solo haya una definicion.
+    -->
+    <PackageReference Include="Xamarin.AndroidX.Core.Core.Ktx" Version="1.19.0.1" />
+  </ItemGroup>
+
+  <!-- Ficheros compartidos por las apps sOCratic (una sola fuente de verdad, anexo E). -->
+  <ItemGroup>
+    <Compile Include="..\Shared\AuthorNotes.cs" Link="AuthorNotes.cs" />
+    <Compile Include="..\Shared\ModernDialog.cs" Link="ModernDialog.cs" />
+  </ItemGroup>
+
+  <!-- Firma Release centralizada (constitucion E.8b). La contrasena se pasa por CLI. -->
+  <Import Project="..\Shared\signing.props" />
+
+</Project>

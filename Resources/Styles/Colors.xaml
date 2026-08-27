@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        Paleta indigo unificada de las apps sOCratic (constitucion E.5). Nombres semanticos por rol
+        y sin prefijo de aplicacion: el diccionario ya delimita el ambito. Todo color de superficie
+        o de texto se declara por pares claro/oscuro y se consume con AppThemeBinding (seccion 24).
+    -->
+
+    <!-- Marca -->
+    <Color x:Key="Primary">#3525CD</Color>
+    <Color x:Key="PrimaryDark">#2A1CB8</Color>
+    <Color x:Key="PrimaryLight">#635BF2</Color>
+    <Color x:Key="Accent">#4F46E5</Color>
+
+    <!-- Estado (solo semantico) -->
+    <Color x:Key="Danger">#BA1A1A</Color>
+    <Color x:Key="Success">#27AE60</Color>
+
+    <!-- Superficies -->
+    <Color x:Key="PageBackgroundLight">#F8F9FA</Color>
+    <Color x:Key="PageBackgroundDark">#141318</Color>
+    <Color x:Key="CardBackgroundLight">#FFFFFF</Color>
+    <Color x:Key="CardBackgroundDark">#201F27</Color>
+    <Color x:Key="SubmenuBackgroundLight">#EDEEEF</Color>
+    <Color x:Key="SubmenuBackgroundDark">#2A2833</Color>
+    <Color x:Key="SeparatorLight">#C7C4D8</Color>
+    <Color x:Key="SeparatorDark">#48454F</Color>
+
+    <!-- Texto -->
+    <Color x:Key="TextPrimaryLight">#191C1D</Color>
+    <Color x:Key="TextPrimaryDark">#E6E1E9</Color>
+    <Color x:Key="TextSecondaryLight">#464555</Color>
+    <Color x:Key="TextSecondaryDark">#C7C4D8</Color>
+
+    <!-- Texto sobre superficie de marca (identica en ambos temas) -->
+    <Color x:Key="OnPrimary">#FFFFFF</Color>
+    <Color x:Key="OnPrimaryMuted">#C3C0FF</Color>
+
+    <!-- Fondo del recuadro de advertencia de la pantalla Acerca de -->
+    <Color x:Key="WarningSurfaceLight">#FFF4E5</Color>
+    <Color x:Key="WarningSurfaceDark">#33291A</Color>
+
+    <!-- Neutros -->
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#000000</Color>
+
+</ResourceDictionary>

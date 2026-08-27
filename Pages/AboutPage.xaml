@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MusicPlayer.Pages.AboutPage">
+
+    <!-- Estructura canonica de la pantalla Acerca de (constitucion A.9). -->
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <!-- Cabecera -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="30,25" Spacing="10">
+                    <Image Source="about_logo.png" HeightRequest="84" WidthRequest="84" HorizontalOptions="Center" />
+                    <Label x:Name="AppNameLabel"
+                           FontSize="26"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalOptions="Center" />
+                    <Label x:Name="VersionLabel" Style="{StaticResource HintText}" FontSize="15" HorizontalOptions="Center" />
+                    <Label x:Name="DescriptionLabel" Style="{StaticResource HintText}" HorizontalTextAlignment="Center" />
+                    <Label Text="Socratic" Style="{StaticResource HintText}" HorizontalOptions="Center" Margin="0,8,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Contacto -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="25,20" Spacing="12">
+                    <Label x:Name="ContactTitle" Style="{StaticResource CardTitle}" />
+                    <Button x:Name="ContactButton"
+                            Style="{StaticResource OutlineButton}"
+                            Clicked="OnContactClicked"
+                            HorizontalOptions="Fill" />
+                    <Label x:Name="ContactHint" Style="{StaticResource HintText}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Idioma -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="25,20" Spacing="12">
+                    <Label x:Name="LanguageTitle" Style="{StaticResource CardTitle}" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0" x:Name="SpanishButton" Style="{StaticResource LanguageButton}" Clicked="OnSpanishClicked" />
+                        <Button Grid.Column="1" x:Name="EnglishButton" Style="{StaticResource LanguageButton}" Clicked="OnEnglishClicked" />
+                    </Grid>
+                    <Label x:Name="LanguageHint" Style="{StaticResource HintText}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Privacidad -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="25,20" Spacing="10">
+                    <Label x:Name="PrivacyTitle" Style="{StaticResource CardTitle}" TextColor="{StaticResource Success}" />
+                    <Label x:Name="PrivacyText" Style="{StaticResource BodyText}" FontSize="13" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Licencia -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="25,20" Spacing="10">
+                    <Label x:Name="LicenseTitle" Style="{StaticResource CardTitle}" />
+                    <Label x:Name="LicenseText" Style="{StaticResource BodyText}" FontSize="13" />
+                    <Label Text="MIT License · Copyright © 2026 Socratic" Style="{StaticResource HintText}" FontSize="11" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Aviso legal -->
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Padding="25,20" Spacing="12">
+                    <Label x:Name="LegalTitle" Style="{StaticResource CardTitle}" TextColor="{StaticResource Danger}" />
+
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarningSurfaceLight}, Dark={StaticResource WarningSurfaceDark}}"
+                            Stroke="Transparent"
+                            StrokeThickness="0"
+                            Padding="15">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="10">
+                            <Label x:Name="LegalText1" Style="{StaticResource BodyText}" FontSize="13" />
+                            <Label x:Name="LegalText2" Style="{StaticResource BodyText}" FontSize="13" />
+
+                            <Border BackgroundColor="{StaticResource Danger}" Stroke="Transparent" StrokeThickness="0" Padding="12">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="6" />
+                                </Border.StrokeShape>
+                                <Label x:Name="WarningText"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource White}"
+                                       HorizontalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:MusicPlayer.Models"
+             x:Class="MusicPlayer.Pages.PlaylistPickerPage">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Cabecera propia: la pagina se abre como modal y no tiene barra de Shell. -->
+        <Grid Grid.Row="0" Style="{StaticResource HeaderBar}" ColumnDefinitions="*,48" Padding="16,44,8,8">
+            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                <Label x:Name="HeaderTitle" Style="{StaticResource HeaderTitle}" />
+                <Label x:Name="HeaderSubtitle" FontSize="12" TextColor="{StaticResource OnPrimaryMuted}" />
+            </VerticalStackLayout>
+            <ImageButton Grid.Column="1"
+                         Style="{StaticResource HeaderIconButton}"
+                         Source="ic_close_w.png"
+                         Clicked="OnCancelClicked" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <CollectionView x:Name="PlaylistsView" SelectionMode="None" Margin="8,8">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:PlaylistChoiceRow">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,6">
+                            <Grid ColumnDefinitions="48,*" ColumnSpacing="8" Padding="8,4">
+                                <CheckBox Grid.Column="0"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          Color="{StaticResource Primary}"
+                                          VerticalOptions="Center" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       Style="{StaticResource ItemTitle}"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <VerticalStackLayout x:Name="EmptyPanel"
+                                 IsVisible="False"
+                                 Padding="32"
+                                 Spacing="10"
+                                 VerticalOptions="Center">
+                <Image Source="ic_playlists.png" WidthRequest="56" HeightRequest="56" HorizontalOptions="Center" />
+                <Label x:Name="EmptyTitle" Style="{StaticResource CardTitle}" HorizontalTextAlignment="Center" />
+                <Label x:Name="EmptyMessage" Style="{StaticResource HintText}" HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <VerticalStackLayout Grid.Row="2" Padding="12" Spacing="8">
+            <Button x:Name="NewPlaylistButton"
+                    Style="{StaticResource OutlineButton}"
+                    ImageSource="ic_add.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnNewPlaylistClicked" />
+            <Button x:Name="SaveButton"
+                    Style="{StaticResource PrimaryButton}"
+                    ImageSource="ic_check_w.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnSaveClicked" />
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentPage>

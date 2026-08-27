@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icono pequeno de la notificacion de reproduccion. Android lo pinta como silueta monocroma, asi
+    que es un glifo blanco sobre transparente: el icono de launcher, que es a color, saldria como
+    una mancha blanca.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="24dp"
+        android:height="24dp"
+        android:viewportWidth="24"
+        android:viewportHeight="24"
+        android:tint="#FFFFFF">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M9,5.4L19,3.2V5.4L9,7.6Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M9,5.4H10.5V16H9Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M17.5,3.6H19V14H17.5Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6.75,13.5m-2.75,0a2.75,2.5 0,1 1,5.5 0a2.75,2.5 0,1 1,-5.5 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15.25,11.5m-2.75,0a2.75,2.5 0,1 1,5.5 0a2.75,2.5 0,1 1,-5.5 0" />
+</vector>

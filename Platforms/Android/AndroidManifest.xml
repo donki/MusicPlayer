@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <application android:allowBackup="true"
+               android:icon="@mipmap/appicon"
+               android:roundIcon="@mipmap/appicon_round"
+               android:supportsRtl="true">
+
+    <!--
+      Declara la aplicacion como app de medios para Android Auto. Sin esta meta-data el coche no
+      la ofrece, por mucho que exista el MediaBrowserService.
+    -->
+    <meta-data android:name="com.google.android.gms.car.application"
+               android:resource="@xml/automotive_app_desc" />
+  </application>
+
+  <!--
+    Permisos (constitucion A.3: justificar cada uno y pedir el minimo imprescindible).
+
+    READ_MEDIA_AUDIO: leer los archivos de audio del dispositivo es la funcion principal de la
+    aplicacion. Es el permiso acotado que sustituye desde Android 13 al de almacenamiento.
+  -->
+  <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+  <!-- Android 12 (API 32) y anteriores: READ_MEDIA_AUDIO todavia no existe. -->
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+                   android:maxSdkVersion="32" />
+
+  <!--
+    WRITE_EXTERNAL_STORAGE: solo para borrar canciones en Android 9 y anteriores. Desde Android 10
+    el borrado pasa por MediaStore, que pide la confirmacion al usuario y no necesita permiso.
+  -->
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+                   android:maxSdkVersion="28" />
+
+  <!--
+    FOREGROUND_SERVICE / FOREGROUND_SERVICE_MEDIA_PLAYBACK: la musica sigue sonando con la pantalla
+    apagada y en Android Auto, lo que exige un servicio en primer plano de tipo reproduccion.
+  -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+  <!-- POST_NOTIFICATIONS: la notificacion con los controles de reproduccion (Android 13+). -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <!-- WAKE_LOCK: mantiene la CPU despierta mientras suena la musica con la pantalla apagada. -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+  <!--
+    INTERNET: dos usos, ambos visibles y controlables por el usuario. Uno es la comprobacion de
+    version al arrancar (constitucion 15). El otro es la busqueda de fotos y biografias de grupos,
+    que esta DESACTIVADA por defecto y solo envia el nombre del grupo.
+  -->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+  <queries>
+    <!-- Boton de contacto de la pantalla Acerca de. -->
+    <intent>
+      <action android:name="android.intent.action.SENDTO" />
+      <data android:scheme="mailto" />
+    </intent>
+  </queries>
+
+</manifest>
