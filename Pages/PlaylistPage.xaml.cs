@@ -17,6 +17,7 @@ public partial class PlaylistPage : ContentPage, IQueryAttributable
     private readonly ILocalizationService _localization;
 
     private readonly ObservableCollection<SongRow> _rows = [];
+    private readonly SongSelection _selection;
     private string _playlistId = string.Empty;
 
     public PlaylistPage()
@@ -42,13 +43,24 @@ public partial class PlaylistPage : ContentPage, IQueryAttributable
         _localization = localization;
 
         SongsView.ItemsSource = _rows;
+        _selection = new SongSelection(this, Selection, _rows);
     }
+
+    /// <summary>
+    /// La flecha atras sale del modo de seleccion antes que de la pagina: es lo que espera
+    /// cualquiera que haya usado la seleccion multiple de Android.
+    /// </summary>
+    protected override bool OnBackButtonPressed() =>
+        _selection.Exit() || base.OnBackButtonPressed();
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue(IdParameter, out var value) && value is string id)
         {
             _playlistId = id;
+
+            // Estando dentro de una lista, la seleccion puede ademas quitar canciones de ella.
+            _selection.PlaylistId = id;
             Load();
         }
     }
@@ -84,6 +96,8 @@ public partial class PlaylistPage : ContentPage, IQueryAttributable
     {
         if (_playlistId.Length == 0 || SongsView is null)
             return;
+
+        _selection.Exit();
 
         var playlist = _playlists.Find(_playlistId);
         if (playlist is null)
@@ -143,10 +157,21 @@ public partial class PlaylistPage : ContentPage, IQueryAttributable
         _playback.Play(_rows.Select(row => row.Song).ToList(), Random.Shared.Next(_rows.Count));
     }
 
-    private void OnSongTapped(object? sender, TappedEventArgs e)
+    private void OnSongTapped(object? sender, EventArgs e)
+    {
+        if ((sender as BindableObject)?.BindingContext is not SongRow row)
+            return;
+
+        if (_selection.HandleTap(row))
+            return;
+
+        PlayRow(row);
+    }
+
+    private void OnSongLongPressed(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is SongRow row)
-            PlayRow(row);
+            _selection.Begin(row);
     }
 
     private async void OnSongMenuClicked(object? sender, EventArgs e)

@@ -23,12 +23,13 @@ internal static class SongMenu
         var playText = localization["ActionPlay"];
         var addText = localization["ActionAddToPlaylist"];
         var artistText = localization["ActionGoToArtist"];
+        var editText = localization["ActionEditTags"];
         var removeText = localization["RemoveFromPlaylist"];
         var deleteText = localization["ActionDelete"];
 
         string[] options = removeFromPlaylistId is null
-            ? [playText, addText, artistText, deleteText]
-            : [playText, addText, artistText, removeText, deleteText];
+            ? [playText, addText, artistText, editText, deleteText]
+            : [playText, addText, artistText, editText, removeText, deleteText];
 
         var choice = await SocShared.ModernDialog.ActionSheetAsync(page,
             localization["SongActionsTitle"], localization["Cancel"], options);
@@ -50,6 +51,10 @@ internal static class SongMenu
             if (name.Length > 0)
                 await Shell.Current.GoToAsync(nameof(ArtistPage),
                     new Dictionary<string, object> { [ArtistPage.NameParameter] = name });
+        }
+        else if (choice == editText)
+        {
+            await page.Navigation.PushModalAsync(new SongEditPage(song));
         }
         else if (choice == removeText && removeFromPlaylistId is not null)
         {

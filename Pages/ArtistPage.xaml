@@ -3,11 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:MusicPlayer.Models"
              xmlns:controls="clr-namespace:MusicPlayer.Controls"
+             xmlns:helpers="clr-namespace:MusicPlayer.Helpers"
              x:Class="MusicPlayer.Pages.ArtistPage">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto">
 
-        <CollectionView x:Name="SongsView" Grid.Row="0" SelectionMode="None" Margin="8,0">
+        <!-- Barra del modo de seleccion multiple: fila propia, encima de la lista. -->
+        <controls:SelectionBar x:Name="Selection" Grid.Row="0" />
+
+
+        <CollectionView x:Name="SongsView" Grid.Row="1" SelectionMode="None" Margin="8,0">
 
             <CollectionView.Header>
                 <VerticalStackLayout Padding="4,8" Spacing="10">
@@ -23,8 +28,19 @@
                     <Label x:Name="ArtistNameLabel" FontSize="22" FontAttributes="Bold" />
                     <Label x:Name="ArtistCountLabel" Style="{StaticResource HintText}" />
 
-                    <!-- Resena, y aviso cuando la busqueda en linea esta desactivada -->
-                    <Label x:Name="ArtistBioLabel" Style="{StaticResource BodyText}" IsVisible="False" />
+                    <!-- Resena recortada: la ficha es para escuchar musica, no para leer. El boton
+                         despliega el texto entero y vuelve a recogerlo. -->
+                    <Label x:Name="ArtistBioLabel"
+                           Style="{StaticResource BodyText}"
+                           IsVisible="False"
+                           MaxLines="3"
+                           LineBreakMode="TailTruncation" />
+                    <ImageButton x:Name="BioToggleButton"
+                                 Style="{StaticResource RowIconButton}"
+                                 Source="ic_more.png"
+                                 IsVisible="False"
+                                 HorizontalOptions="Start"
+                                 Clicked="OnToggleBioClicked" />
                     <Label x:Name="ArtistSourceLabel" Style="{StaticResource HintText}" IsVisible="False" />
 
                     <Border x:Name="LookupHintCard" Style="{StaticResource Card}" IsVisible="False">
@@ -56,11 +72,28 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:SongRow">
                     <Border Style="{StaticResource Card}" Margin="0,0,0,6">
+                        <!-- La fila marcada se realza con el borde de marca; el estilo Card la deja lisa al desmarcarla. -->
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Stroke" Value="{StaticResource Primary}" />
+                                <Setter Property="StrokeThickness" Value="2" />
+                            </DataTrigger>
+                        </Border.Triggers>
                         <Grid ColumnDefinitions="48,*,Auto,48" ColumnSpacing="8" Padding="8,6">
+                            <!-- Toque y pulsacion larga, los dos con los gestos nativos de Android: mantener
+                                 pulsado inicia la seleccion multiple. No se usa TapGestureRecognizer porque su
+                                 detector se come el evento y la pulsacion larga no llega a dispararse. -->
+                            <Grid.Behaviors>
+                                <helpers:ItemTouchBehavior Tapped="OnSongTapped" LongPressed="OnSongLongPressed" />
+                            </Grid.Behaviors>
                             <Border Grid.Column="0" Style="{StaticResource ArtworkPlaceholder}" WidthRequest="44" HeightRequest="44">
                                 <Grid>
                                     <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="8" />
                                     <Image Source="{Binding Artwork}" Aspect="AspectFill" />
+                                    <!-- Casilla de seleccion: tapa la caratula para que se vea de un vistazo que esta marcada. -->
+                                    <Grid IsVisible="{Binding IsSelected}" BackgroundColor="{StaticResource Primary}">
+                                        <Image Source="ic_check_w.png" Aspect="AspectFit" Margin="10" />
+                                    </Grid>
                                 </Grid>
                             </Border>
                             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
@@ -72,16 +105,13 @@
                                          Style="{StaticResource RowIconButton}"
                                          Source="ic_more.png"
                                          Clicked="OnSongMenuClicked" />
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnSongTapped" />
-                            </Grid.GestureRecognizers>
                         </Grid>
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <controls:MiniPlayerView x:Name="MiniPlayer" Grid.Row="1" />
+        <controls:MiniPlayerView x:Name="MiniPlayer" Grid.Row="2" />
     </Grid>
 
 </ContentPage>

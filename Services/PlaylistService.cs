@@ -134,12 +134,28 @@ public sealed class PlaylistService : IPlaylistService
         RaiseChanged();
     }
 
-    public void RemoveSong(string playlistId, long songId)
+    public void AddSongs(IReadOnlyCollection<long> songIds, IReadOnlyCollection<string> playlistIds)
     {
+        if (songIds.Count == 0 || playlistIds.Count == 0)
+            return;
+
         lock (_gate)
         {
-            var playlist = _playlists.FirstOrDefault(item => item.Id == playlistId);
-            if (playlist is null || !playlist.SongIds.Remove(songId))
+            var added = false;
+            foreach (var playlist in _playlists.Where(playlist => playlistIds.Contains(playlist.Id)))
+            {
+                foreach (var songId in songIds)
+                {
+                    // Una lista no repite canciones: anadir dos veces la misma no hace nada.
+                    if (playlist.SongIds.Contains(songId))
+                        continue;
+
+                    playlist.SongIds.Add(songId);
+                    added = true;
+                }
+            }
+
+            if (!added)
                 return;
             Save();
         }
@@ -147,13 +163,36 @@ public sealed class PlaylistService : IPlaylistService
         RaiseChanged();
     }
 
-    public void RemoveSongEverywhere(long songId)
+    public void RemoveSong(string playlistId, long songId) => RemoveSongs(playlistId, [songId]);
+
+    public void RemoveSongs(string playlistId, IReadOnlyCollection<long> songIds)
     {
+        if (songIds.Count == 0)
+            return;
+
+        lock (_gate)
+        {
+            var playlist = _playlists.FirstOrDefault(item => item.Id == playlistId);
+            if (playlist is null || playlist.SongIds.RemoveAll(songIds.Contains) == 0)
+                return;
+            Save();
+        }
+
+        RaiseChanged();
+    }
+
+    public void RemoveSongEverywhere(long songId) => RemoveSongsEverywhere([songId]);
+
+    public void RemoveSongsEverywhere(IReadOnlyCollection<long> songIds)
+    {
+        if (songIds.Count == 0)
+            return;
+
         lock (_gate)
         {
             var removed = false;
             foreach (var playlist in _playlists)
-                removed |= playlist.SongIds.Remove(songId);
+                removed |= playlist.SongIds.RemoveAll(songIds.Contains) > 0;
 
             if (!removed)
                 return;
