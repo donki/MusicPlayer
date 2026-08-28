@@ -16,8 +16,8 @@
     <ApplicationId>com.socratic.musicplayer</ApplicationId>
 
     <!-- Versions (constitucion A.4: ambos valores en sincronia, esquema de fecha) -->
-    <ApplicationDisplayVersion>2026.08.28.2</ApplicationDisplayVersion>
-    <ApplicationVersion>202608282</ApplicationVersion>
+    <ApplicationDisplayVersion>2026.08.28.3</ApplicationDisplayVersion>
+    <ApplicationVersion>202608283</ApplicationVersion>
 
     <AcceptAndroidSDKLicenses>true</AcceptAndroidSDKLicenses>
 
@@ -40,8 +40,8 @@
     <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
 
-    <AssemblyVersion>2026.08.28.2</AssemblyVersion>
-    <FileVersion>2026.08.28.2</FileVersion>
+    <AssemblyVersion>2026.08.28.3</AssemblyVersion>
+    <FileVersion>2026.08.28.3</FileVersion>
   </PropertyGroup>
 
   <!--
