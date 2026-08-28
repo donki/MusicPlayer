@@ -14,6 +14,9 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
     /// <summary>Clave con la que la biblioteca pasa el grupo al navegar.</summary>
     public const string NameParameter = "name";
 
+    /// <summary>Lineas de resena que se ven sin desplegar: suficiente para saber de quien va.</summary>
+    private const int CollapsedBioLines = 3;
+
     private readonly IMusicLibraryService _library;
     private readonly IPlaybackService _playback;
     private readonly IArtistInfoService _artistInfo;
@@ -21,7 +24,9 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
     private readonly ILocalizationService _localization;
 
     private readonly ObservableCollection<SongRow> _rows = [];
+    private readonly SongSelection _selection;
     private ArtistGroup? _artist;
+    private bool _bioExpanded;
     private string _artistName = string.Empty;
 
     public ArtistPage()
@@ -50,7 +55,15 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         _localization = localization;
 
         SongsView.ItemsSource = _rows;
+        _selection = new SongSelection(this, Selection, _rows);
     }
+
+    /// <summary>
+    /// La flecha atras sale del modo de seleccion antes que de la pagina: es lo que espera
+    /// cualquiera que haya usado la seleccion multiple de Android.
+    /// </summary>
+    protected override bool OnBackButtonPressed() =>
+        _selection.Exit() || base.OnBackButtonPressed();
 
     /// <summary>
     /// El nombre del grupo llega como objeto, no dentro de la cadena de la ruta: asi no hay que
@@ -94,6 +107,8 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         if (_artistName.Length == 0 || SongsView is null)
             return;
 
+        _selection.Exit();
+
         _artist = _library.FindArtist(_artistName);
         Title = _artistName;
         ArtistNameLabel.Text = _artistName;
@@ -112,8 +127,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
             ? _localization["SongCountOne"]
             : _localization.Format("SongCountMany", _artist.SongCount);
 
-        if (_artist.ImagePath is not null)
-            ArtistImage.Source = ImageSource.FromFile(_artist.ImagePath);
+        ArtistImage.Source = _library.GetArtistArt(_artist);
 
         ShowDescription(_artist.Description);
     }
@@ -138,8 +152,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         _artist.ImagePath = info.ImagePath;
         _artist.Description = info.Description;
 
-        if (info.ImagePath is not null)
-            ArtistImage.Source = ImageSource.FromFile(info.ImagePath);
+        ArtistImage.Source = _library.GetArtistArt(_artist);
 
         ShowDescription(info.Description);
     }
@@ -150,6 +163,24 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         ArtistBioLabel.Text = description ?? string.Empty;
         ArtistBioLabel.IsVisible = hasDescription;
         ArtistSourceLabel.IsVisible = hasDescription || _artist?.ImagePath is not null;
+
+        // Cada grupo empieza recogido: al cambiar de ficha no se hereda lo desplegado del anterior.
+        _bioExpanded = false;
+        BioToggleButton.IsVisible = hasDescription;
+        ApplyBioState();
+    }
+
+    /// <summary>Despliega o recoge la resena.</summary>
+    private void OnToggleBioClicked(object? sender, EventArgs e)
+    {
+        _bioExpanded = !_bioExpanded;
+        ApplyBioState();
+    }
+
+    private void ApplyBioState()
+    {
+        ArtistBioLabel.MaxLines = _bioExpanded ? -1 : CollapsedBioLines;
+        BioToggleButton.Source = _bioExpanded ? "ic_close.png" : "ic_more.png";
     }
 
     private SongRow BuildRow(Song song) => new()
@@ -179,10 +210,21 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         _playback.Play(_artist.Songs, Random.Shared.Next(_artist.SongCount));
     }
 
-    private void OnSongTapped(object? sender, TappedEventArgs e)
+    private void OnSongTapped(object? sender, EventArgs e)
+    {
+        if ((sender as BindableObject)?.BindingContext is not SongRow row)
+            return;
+
+        if (_selection.HandleTap(row))
+            return;
+
+        PlayRow(row);
+    }
+
+    private void OnSongLongPressed(object? sender, EventArgs e)
     {
         if ((sender as BindableObject)?.BindingContext is SongRow row)
-            PlayRow(row);
+            _selection.Begin(row);
     }
 
     private async void OnSongMenuClicked(object? sender, EventArgs e)

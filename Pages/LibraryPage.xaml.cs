@@ -31,6 +31,8 @@ public partial class LibraryPage : ContentPage
     private readonly ObservableCollection<SongRow> _songRows = [];
     private readonly ObservableCollection<PlaylistRow> _playlistRows = [];
 
+    private readonly SongSelection _selection;
+
     private Section _section = Section.Artists;
     private string _search = string.Empty;
     private bool _isBusy;
@@ -76,7 +78,16 @@ public partial class LibraryPage : ContentPage
         ArtistsView.ItemsSource = _artistRows;
         SongsView.ItemsSource = _songRows;
         PlaylistsView.ItemsSource = _playlistRows;
+
+        _selection = new SongSelection(this, Selection, _songRows);
     }
+
+    /// <summary>
+    /// La flecha atras sale del modo de seleccion antes que de la pagina: es lo que espera
+    /// cualquiera que haya usado la seleccion multiple de Android.
+    /// </summary>
+    protected override bool OnBackButtonPressed() =>
+        _selection.Exit() || base.OnBackButtonPressed();
 
     protected override async void OnAppearing()
     {
@@ -217,6 +228,9 @@ public partial class LibraryPage : ContentPage
 
     private void RefreshRows()
     {
+        // Las filas se reconstruyen enteras, asi que lo que hubiera marcado ya no existe.
+        _selection.Exit();
+
         var term = _search.Trim();
 
         _artistRows.Clear();
@@ -229,7 +243,7 @@ public partial class LibraryPage : ContentPage
             {
                 Name = artist.Name,
                 Subtitle = SongCountText(artist.SongCount),
-                Image = artist.ImagePath is null ? null : ImageSource.FromFile(artist.ImagePath),
+                Image = _library.GetArtistArt(artist),
             });
         }
 
@@ -300,6 +314,7 @@ public partial class LibraryPage : ContentPage
 
     private void SelectSection(Section section)
     {
+        _selection.Exit();
         _section = section;
         ApplySection();
     }
@@ -420,12 +435,21 @@ public partial class LibraryPage : ContentPage
             new Dictionary<string, object> { [ArtistPage.NameParameter] = row.Name });
     }
 
-    private void OnSongTapped(object? sender, TappedEventArgs e)
+    private void OnSongTapped(object? sender, EventArgs e)
     {
         if (Row<SongRow>(sender) is not { } row)
             return;
 
+        if (_selection.HandleTap(row))
+            return;
+
         PlayFromCurrentList(row);
+    }
+
+    private void OnSongLongPressed(object? sender, EventArgs e)
+    {
+        if (Row<SongRow>(sender) is { } row)
+            _selection.Begin(row);
     }
 
     private void PlayFromCurrentList(SongRow row)

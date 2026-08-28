@@ -30,8 +30,19 @@ public interface IPlaylistService
     /// </summary>
     void SetMembership(long songId, IReadOnlyCollection<string> playlistIds);
 
+    /// <summary>
+    /// Anade las canciones a las listas indicadas <b>sin quitarlas de ninguna otra</b>. Es lo que
+    /// necesita una seleccion multiple: con varias canciones no hay una pertenencia comun que
+    /// editar, solo canciones que se quieren meter en unas listas.
+    /// </summary>
+    void AddSongs(IReadOnlyCollection<long> songIds, IReadOnlyCollection<string> playlistIds);
+
     void RemoveSong(string playlistId, long songId);
+
+    void RemoveSongs(string playlistId, IReadOnlyCollection<long> songIds);
 
     /// <summary>Quita la cancion de todas las listas; se usa al borrarla del dispositivo.</summary>
     void RemoveSongEverywhere(long songId);
+
+    void RemoveSongsEverywhere(IReadOnlyCollection<long> songIds);
 }

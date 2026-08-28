@@ -16,10 +16,10 @@ namespace MusicPlayer;
         | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 public class MainActivity : MauiAppCompatActivity
 {
-    /// <summary>Codigo con el que vuelve la confirmacion de borrado que muestra el sistema.</summary>
-    private const int DeleteRequestCode = 4711;
+    /// <summary>Codigo con el que vuelve la confirmacion que muestra el sistema.</summary>
+    private const int SystemRequestCode = 4711;
 
-    private static TaskCompletionSource<bool>? _pendingDeleteConfirmation;
+    private static TaskCompletionSource<bool>? _pendingSystemConfirmation;
 
     /// <summary>
     /// Actividad viva, que hace falta para lanzar la confirmacion de borrado del sistema. Es
@@ -43,17 +43,18 @@ public class MainActivity : MauiAppCompatActivity
     }
 
     /// <summary>
-    /// Lanza el dialogo de borrado del sistema y espera la decision del usuario. Devuelve
-    /// <c>false</c> si el usuario lo rechaza; nunca borra nada por su cuenta.
+    /// Lanza un dialogo del sistema —borrar o poder escribir sobre unos ficheros— y espera la
+    /// decision del usuario. Devuelve <c>false</c> si lo rechaza; la aplicacion nunca hace nada
+    /// sobre los ficheros del usuario por su cuenta.
     /// </summary>
-    public Task<bool> ConfirmDeleteAsync(IntentSender sender)
+    public Task<bool> ConfirmSystemRequestAsync(IntentSender sender)
     {
-        _pendingDeleteConfirmation?.TrySetResult(false);
+        _pendingSystemConfirmation?.TrySetResult(false);
 
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingDeleteConfirmation = completion;
+        _pendingSystemConfirmation = completion;
 
-        StartIntentSenderForResult(sender, DeleteRequestCode, null, 0, 0, 0);
+        StartIntentSenderForResult(sender, SystemRequestCode, null, 0, 0, 0);
         return completion.Task;
     }
 
@@ -61,11 +62,11 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnActivityResult(requestCode, resultCode, data);
 
-        if (requestCode != DeleteRequestCode)
+        if (requestCode != SystemRequestCode)
             return;
 
-        var completion = _pendingDeleteConfirmation;
-        _pendingDeleteConfirmation = null;
+        var completion = _pendingSystemConfirmation;
+        _pendingSystemConfirmation = null;
         completion?.TrySetResult(resultCode == Result.Ok);
     }
 

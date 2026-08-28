@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MusicPlayer.Pages.SongEditPage">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Cabecera propia: la pagina se abre como modal y no tiene barra de Shell. -->
+        <Grid Grid.Row="0" Style="{StaticResource HeaderBar}" ColumnDefinitions="*,48" Padding="16,44,8,8">
+            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                <Label x:Name="HeaderTitle" Style="{StaticResource HeaderTitle}" />
+                <Label x:Name="HeaderSubtitle" FontSize="12" TextColor="{StaticResource OnPrimaryMuted}" />
+            </VerticalStackLayout>
+            <ImageButton Grid.Column="1"
+                         Style="{StaticResource HeaderIconButton}"
+                         Source="ic_close_w.png"
+                         Clicked="OnCancelClicked" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="12" Spacing="10">
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Padding="14" Spacing="8">
+                        <Label x:Name="TitleCaption" Style="{StaticResource HintText}" />
+                        <Entry x:Name="TitleEntry" />
+
+                        <Label x:Name="ArtistCaption" Style="{StaticResource HintText}" />
+                        <Entry x:Name="ArtistEntry" />
+
+                        <Label x:Name="AlbumArtistCaption" Style="{StaticResource HintText}" />
+                        <Entry x:Name="AlbumArtistEntry" />
+
+                        <Label x:Name="AlbumCaption" Style="{StaticResource HintText}" />
+                        <Entry x:Name="AlbumEntry" />
+
+                        <Label x:Name="ComposerCaption" Style="{StaticResource HintText}" />
+                        <Entry x:Name="ComposerEntry" />
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="8">
+                                <Label x:Name="TrackCaption" Style="{StaticResource HintText}" />
+                                <Entry x:Name="TrackEntry" Keyboard="Numeric" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="8">
+                                <Label x:Name="YearCaption" Style="{StaticResource HintText}" />
+                                <Entry x:Name="YearEntry" Keyboard="Numeric" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Se explica hasta donde llega el cambio: no se reescribe el fichero. -->
+                <Label x:Name="ScopeHint" Style="{StaticResource HintText}" Margin="4,0" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <VerticalStackLayout Grid.Row="2" Padding="12" Spacing="8">
+            <Button x:Name="ResetButton"
+                    Style="{StaticResource OutlineButton}"
+                    ImageSource="ic_refresh.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnResetClicked" />
+            <Button x:Name="SaveButton"
+                    Style="{StaticResource PrimaryButton}"
+                    ImageSource="ic_check_w.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnSaveClicked" />
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentPage>

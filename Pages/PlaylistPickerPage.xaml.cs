@@ -6,22 +6,37 @@ using MusicPlayer.Services;
 namespace MusicPlayer.Pages;
 
 /// <summary>
-/// Selector de listas de una cancion. Es de seleccion multiple a proposito: desde una cancion se
-/// puede marcar de golpe en cuantas listas se quiera, y desmarcarla de las que ya no toque.
+/// Selector de listas. Es de seleccion multiple a proposito: se puede marcar de golpe en cuantas
+/// listas se quiera.
 /// </summary>
+/// <remarks>
+/// Se comporta de dos maneras segun de donde se abra, y la diferencia no es un capricho:
+/// <list type="bullet">
+///   <item><description>Con <b>una</b> cancion edita su pertenencia: las listas donde ya esta
+///   aparecen marcadas y desmarcar una la saca de ella.</description></item>
+///   <item><description>Con <b>varias</b> solo anade. No hay una pertenencia comun que mostrar
+///   (cada cancion esta en unas listas distintas), y desmarcar significaria sacar canciones de
+///   listas que el usuario no ha mirado.</description></item>
+/// </list>
+/// </remarks>
 public partial class PlaylistPickerPage : ContentPage
 {
     private readonly IPlaylistService _playlists;
     private readonly ILocalizationService _localization;
     private readonly IToastService _toast;
-    private readonly Song _song;
+    private readonly IReadOnlyList<Song> _songs;
     private readonly ObservableCollection<PlaylistChoiceRow> _rows = [];
 
     public PlaylistPickerPage(Song song)
+        : this([song])
+    {
+    }
+
+    public PlaylistPickerPage(IReadOnlyList<Song> songs)
     {
         InitializeComponent();
 
-        _song = song;
+        _songs = songs;
         _playlists = ServiceHelper.GetRequiredService<IPlaylistService>();
         _localization = ServiceHelper.GetRequiredService<ILocalizationService>();
         _toast = ServiceHelper.GetRequiredService<IToastService>();
@@ -32,19 +47,29 @@ public partial class PlaylistPickerPage : ContentPage
         Reload();
     }
 
+    /// <summary>Con una sola cancion se edita su pertenencia; con varias solo se anade.</summary>
+    private bool IsMembershipMode => _songs.Count == 1;
+
     private void ApplyTexts()
     {
         HeaderTitle.Text = _localization["SelectPlaylistsTitle"];
-        HeaderSubtitle.Text = _song.Title;
+        HeaderSubtitle.Text = IsMembershipMode
+            ? _songs[0].Title
+            : _localization.Format("SongCountMany", _songs.Count);
         EmptyTitle.Text = _localization["NoPlaylistsTitle"];
-        EmptyMessage.Text = _localization["SelectPlaylistsHint"];
+        EmptyMessage.Text = IsMembershipMode
+            ? _localization["SelectPlaylistsHint"]
+            : _localization["SelectPlaylistsHintMany"];
         NewPlaylistButton.Text = _localization["NewPlaylist"];
         SaveButton.Text = _localization["Save"];
     }
 
     private void Reload()
     {
-        var current = _playlists.PlaylistIdsContaining(_song.Id);
+        // Con varias canciones se parte de nada marcado: lo que se marque se anade, y punto.
+        var current = IsMembershipMode
+            ? _playlists.PlaylistIdsContaining(_songs[0].Id)
+            : [];
 
         _rows.Clear();
         foreach (var playlist in _playlists.Playlists)
@@ -96,11 +121,16 @@ public partial class PlaylistPickerPage : ContentPage
     private async void OnSaveClicked(object? sender, EventArgs e)
     {
         var selected = _rows.Where(row => row.IsSelected).Select(row => row.Id).ToList();
-        _playlists.SetMembership(_song.Id, selected);
+
+        if (IsMembershipMode)
+            _playlists.SetMembership(_songs[0].Id, selected);
+        else
+            _playlists.AddSongs(_songs.Select(song => song.Id).ToList(), selected);
 
         _toast.Show(selected.Count switch
         {
-            0 => _localization["RemovedFromPlaylists"],
+            // Sin nada marcado y editando pertenencia, guardar significa sacarla de todas.
+            0 => IsMembershipMode ? _localization["RemovedFromPlaylists"] : _localization["NothingAdded"],
             1 => _localization["AddedToPlaylistsOne"],
             _ => _localization.Format("AddedToPlaylistsMany", selected.Count),
         });

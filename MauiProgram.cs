@@ -17,6 +17,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IArtistInfoService, ArtistInfoService>();
         builder.Services.AddSingleton<IPlaylistService, PlaylistService>();
+        builder.Services.AddSingleton<ISongTagsService, SongTagsService>();
         builder.Services.AddSingleton<UpdateService>();
 
 #if ANDROID

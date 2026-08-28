@@ -4,6 +4,22 @@ Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11)
 
 ---
 
+## 2026.08.28.1 — 2026-08-28
+
+### Anadido
+- **Seleccion multiple** en las tres listas de canciones (biblioteca, grupo y lista de
+  reproduccion): se entra manteniendo pulsada una cancion y desde la barra contextual se puede
+  reproducir la seleccion, anadirla a listas, quitarla de la lista que se esta viendo o borrarla
+  del dispositivo con una sola confirmacion del sistema.
+- **Edicion de la informacion de una cancion** (titulo, artista, artista del album, album,
+  compositor, pista y ano) desde su menu, para que la busqueda y la agrupacion acierten. La
+  correccion la guarda la aplicacion y, si el sistema lo permite, se escribe tambien en el indice
+  de medios; el archivo de audio no se reescribe.
+
+### Cambiado
+- La imagen de un grupo o compositor sin foto descargada usa ahora la **caratula de su primera
+  cancion** que tenga una, en vez del marcador generico.
+
 ## 2026.08.27.0 — Primera versión
 
 Versión inicial de la aplicación.

@@ -34,6 +34,7 @@ public sealed class MusicLibraryService : IMusicLibraryService
     private readonly ISettingsService _settings;
     private readonly IMediaAccessService _access;
     private readonly IArtistInfoService _artistInfo;
+    private readonly ISongTagsService _tags;
     private readonly ILogger<MusicLibraryService> _logger;
 
     /// <summary>Tope de caratulas retenidas en memoria a la vez.</summary>
@@ -50,11 +51,13 @@ public sealed class MusicLibraryService : IMusicLibraryService
         ISettingsService settings,
         IMediaAccessService access,
         IArtistInfoService artistInfo,
+        ISongTagsService tags,
         ILogger<MusicLibraryService> logger)
     {
         _settings = settings;
         _access = access;
         _artistInfo = artistInfo;
+        _tags = tags;
         _logger = logger;
     }
 
@@ -164,41 +167,145 @@ public sealed class MusicLibraryService : IMusicLibraryService
         }
     }
 
-    public async Task<DeleteOutcome> DeleteAsync(Song song)
+    public async Task<TagsOutcome> UpdateTagsAsync(Song song, SongTags tags)
     {
+        // Primero la correccion propia: es la que hace que la busqueda y la agrupacion acierten, y
+        // la unica que sobrevive a un reindexado del sistema.
+        _tags.Save(song.Id, tags);
+
+        var inSystem = await TryUpdateMediaStoreAsync(song, tags).ConfigureAwait(false);
+        await ScanAsync().ConfigureAwait(false);
+
+        return inSystem ? TagsOutcome.Saved : TagsOutcome.SavedInAppOnly;
+    }
+
+    public async Task ResetTagsAsync(Song song)
+    {
+        _tags.Forget([song.Id]);
+        await ScanAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Traslada la correccion al indice de medios para que la vean las demas aplicaciones. Desde
+    /// Android 11 el fichero no es nuestro, asi que el sistema pide permiso de escritura al
+    /// usuario; si lo niega no pasa nada grave: dentro de la aplicacion la correccion ya vale.
+    /// </summary>
+    private async Task<bool> TryUpdateMediaStoreAsync(Song song, SongTags tags)
+    {
+        var resolver = global::Android.App.Application.Context.ContentResolver;
+        var collection = MediaStore.Audio.Media.ExternalContentUri;
+        if (resolver is null || collection is null)
+            return false;
+
+        var uri = ContentUris.WithAppendedId(collection, song.Id);
+        if (uri is null)
+            return false;
+
+        if (OperatingSystem.IsAndroidVersionAtLeast(30) && !await RequestWriteAccessAsync(resolver, uri).ConfigureAwait(false))
+            return false;
+
+        try
+        {
+            var values = new ContentValues();
+            values.Put("title", tags.Title);
+            values.Put("artist", tags.Artist);
+            values.Put("album_artist", tags.AlbumArtist);
+            values.Put("album", tags.Album);
+            values.Put("composer", tags.Composer);
+            values.Put("track", tags.Track);
+            values.Put("year", tags.Year);
+
+            return resolver.Update(uri, values, null, null) > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "The media index could not be updated for song {SongId}.", song.Id);
+            return false;
+        }
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("android30.0")]
+    private async Task<bool> RequestWriteAccessAsync(ContentResolver resolver, AndroidUri uri)
+    {
+        var activity = MainActivity.Current;
+        if (activity is null)
+            return false;
+
+        var request = MediaStore.CreateWriteRequest(resolver, new List<AndroidUri> { uri });
+        if (request?.IntentSender is null)
+            return false;
+
+        return await activity.ConfirmSystemRequestAsync(request.IntentSender).ConfigureAwait(false);
+    }
+
+    public Task<DeleteOutcome> DeleteAsync(Song song) => DeleteAsync([song]);
+
+    public ImageSource? GetArtistArt(ArtistGroup artist)
+    {
+        if (artist.ImagePath is not null)
+            return ImageSource.FromFile(artist.ImagePath);
+
+        // Se para en la primera que tenga caratula: el resultado esta cacheado por album, asi que
+        // recorrer un grupo entero sin ninguna solo cuesta caro la primera vez.
+        foreach (var song in artist.Songs)
+        {
+            if (GetAlbumArt(song) is { } art)
+                return art;
+        }
+
+        return null;
+    }
+
+    public async Task<DeleteOutcome> DeleteAsync(IReadOnlyList<Song> songs)
+    {
+        if (songs.Count == 0)
+            return DeleteOutcome.Failed;
+
         var context = global::Android.App.Application.Context;
         var resolver = context.ContentResolver;
         if (resolver is null)
             return DeleteOutcome.Failed;
 
-        var uri = ContentUris.WithAppendedId(MediaStore.Audio.Media.ExternalContentUri!, song.Id);
-        if (uri is null)
+        var collection = MediaStore.Audio.Media.ExternalContentUri;
+        if (collection is null)
+            return DeleteOutcome.Failed;
+
+        var uris = songs
+            .Select(song => ContentUris.WithAppendedId(collection, song.Id))
+            .OfType<AndroidUri>()
+            .ToList();
+
+        if (uris.Count == 0)
             return DeleteOutcome.Failed;
 
         try
         {
             var outcome = OperatingSystem.IsAndroidVersionAtLeast(30)
-                ? await DeleteWithSystemConfirmationAsync(resolver, uri).ConfigureAwait(false)
-                : DeleteDirectly(resolver, uri);
+                ? await DeleteWithSystemConfirmationAsync(resolver, uris).ConfigureAwait(false)
+                : DeleteDirectly(resolver, uris);
 
             if (outcome == DeleteOutcome.Deleted)
+            {
+                _tags.Forget(songs.Select(song => song.Id).ToList());
                 await ScanAsync().ConfigureAwait(false);
+            }
 
             return outcome;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "The song {SongId} could not be deleted.", song.Id);
+            _logger.LogError(ex, "The {Count} selected songs could not be deleted.", uris.Count);
             return DeleteOutcome.Failed;
         }
     }
 
     /// <summary>
     /// Android 11+: la confirmacion la pinta el sistema sobre la actividad. La aplicacion no puede
-    /// borrar nada a espaldas del usuario, que es exactamente lo que queremos.
+    /// borrar nada a espaldas del usuario, que es exactamente lo que queremos. El sistema admite
+    /// varias URI en una sola peticion, asi que un lote se confirma de una vez.
     /// </summary>
     [System.Runtime.Versioning.SupportedOSPlatform("android30.0")]
-    private async Task<DeleteOutcome> DeleteWithSystemConfirmationAsync(ContentResolver resolver, AndroidUri uri)
+    private async Task<DeleteOutcome> DeleteWithSystemConfirmationAsync(ContentResolver resolver, IList<AndroidUri> uris)
     {
         var activity = MainActivity.Current;
         if (activity is null)
@@ -207,17 +314,20 @@ public sealed class MusicLibraryService : IMusicLibraryService
             return DeleteOutcome.Failed;
         }
 
-        var request = MediaStore.CreateDeleteRequest(resolver, new List<AndroidUri> { uri });
+        var request = MediaStore.CreateDeleteRequest(resolver, uris);
         if (request?.IntentSender is null)
             return DeleteOutcome.Failed;
 
-        var confirmed = await activity.ConfirmDeleteAsync(request.IntentSender).ConfigureAwait(false);
+        var confirmed = await activity.ConfirmSystemRequestAsync(request.IntentSender).ConfigureAwait(false);
         return confirmed ? DeleteOutcome.Deleted : DeleteOutcome.Cancelled;
     }
 
-    /// <summary>Android 10 y anteriores: borrado directo, con el permiso de escritura del manifiesto.</summary>
-    private DeleteOutcome DeleteDirectly(ContentResolver resolver, AndroidUri uri) =>
-        resolver.Delete(uri, null, null) > 0 ? DeleteOutcome.Deleted : DeleteOutcome.Failed;
+    /// <summary>
+    /// Android 10 y anteriores: borrado directo, con el permiso de escritura del manifiesto. Se
+    /// da por bueno si cae al menos una: el resto pueden ser pistas que ya no estaban.
+    /// </summary>
+    private DeleteOutcome DeleteDirectly(ContentResolver resolver, IEnumerable<AndroidUri> uris) =>
+        uris.Sum(uri => resolver.Delete(uri, null, null)) > 0 ? DeleteOutcome.Deleted : DeleteOutcome.Failed;
 
     // ==================================================================================
     //  Lectura del indice de medios
@@ -264,7 +374,9 @@ public sealed class MusicLibraryService : IMusicLibraryService
             if (string.IsNullOrEmpty(contentUri))
                 continue;
 
-            songs.Add(new Song
+            // La correccion del usuario manda sobre lo que diga el indice: es justo lo que se
+            // pidio al editarla, y sin esto un reindexado la desharia.
+            songs.Add(_tags.Apply(new Song
             {
                 Id = id,
                 ContentUri = contentUri,
@@ -279,7 +391,7 @@ public sealed class MusicLibraryService : IMusicLibraryService
                 // El numero de pista viene como DDD (disco * 1000 + pista) en discos multiples.
                 Track = (int)(ReadLong(cursor, trackColumn) % 1000),
                 Year = (int)ReadLong(cursor, yearColumn),
-            });
+            }));
         }
 
         return songs;
