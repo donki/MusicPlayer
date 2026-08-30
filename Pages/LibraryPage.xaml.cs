@@ -24,6 +24,7 @@ public partial class LibraryPage : ContentPage
     private readonly IMediaAccessService _access;
     private readonly ILocalizationService _localization;
     private readonly IArtistInfoService _artistInfo;
+    private readonly ISettingsService _settings;
     private readonly IToastService _toast;
     private readonly UpdateService _updates;
 
@@ -49,6 +50,7 @@ public partial class LibraryPage : ContentPage
             ServiceHelper.GetRequiredService<IMediaAccessService>(),
             ServiceHelper.GetRequiredService<ILocalizationService>(),
             ServiceHelper.GetRequiredService<IArtistInfoService>(),
+            ServiceHelper.GetRequiredService<ISettingsService>(),
             ServiceHelper.GetRequiredService<IToastService>(),
             ServiceHelper.GetRequiredService<UpdateService>())
     {
@@ -61,6 +63,7 @@ public partial class LibraryPage : ContentPage
         IMediaAccessService access,
         ILocalizationService localization,
         IArtistInfoService artistInfo,
+        ISettingsService settings,
         IToastService toast,
         UpdateService updates)
     {
@@ -72,6 +75,7 @@ public partial class LibraryPage : ContentPage
         _access = access;
         _localization = localization;
         _artistInfo = artistInfo;
+        _settings = settings;
         _toast = toast;
         _updates = updates;
 
@@ -153,28 +157,33 @@ public partial class LibraryPage : ContentPage
         if (!forceRescan && _library.HasScanned)
         {
             RefreshRows();
+            RestoreLastSong();
             return;
         }
 
-        if (!await _access.IsGrantedAsync())
-        {
-            var accepted = await SocShared.ModernDialog.AlertAsync(this,
-                _localization["PermissionTitle"], _localization["PermissionMessage"],
-                _localization["GrantAccess"], _localization["Cancel"]);
-
-            if (!accepted || !await _access.RequestAsync())
-            {
-                ShowStatus(_localization["PermissionDeniedTitle"], _localization["PermissionDeniedMessage"],
-                    _localization["GrantAccess"], StatusAction.OpenSettings);
-                return;
-            }
-        }
-
+        // Ocupado desde AQUI, no solo durante el escaneo. Pedir el permiso manda la aplicacion a
+        // segundo plano, y al volver se dispara OnAppearing otra vez: sin esta marca, la segunda
+        // pasada pintaba un SEGUNDO dialogo de permiso que se quedaba colgado en pantalla para
+        // siempre, porque quien lo cerraba era la primera.
         _isBusy = true;
-        ShowStatus(_localization["ScanningLibrary"], string.Empty, null, StatusAction.None, spinner: true);
 
         try
         {
+            if (!await _access.IsGrantedAsync())
+            {
+                var accepted = await SocShared.ModernDialog.AlertAsync(this,
+                    _localization["PermissionTitle"], _localization["PermissionMessage"],
+                    _localization["GrantAccess"], _localization["Cancel"]);
+
+                if (!accepted || !await _access.RequestAsync())
+                {
+                    ShowStatus(_localization["PermissionDeniedTitle"], _localization["PermissionDeniedMessage"],
+                        _localization["GrantAccess"], StatusAction.OpenSettings);
+                    return;
+                }
+            }
+
+            ShowStatus(_localization["ScanningLibrary"], string.Empty, null, StatusAction.None, spinner: true);
             await _library.ScanAsync();
         }
         finally
@@ -183,7 +192,35 @@ public partial class LibraryPage : ContentPage
         }
 
         RefreshRows();
+        RestoreLastSong();
         _ = PrefetchArtistImagesAsync();
+    }
+
+    /// <summary>
+    /// Deja cargada la ultima cancion escuchada al abrir la aplicacion, en pausa y por su sitio en
+    /// la biblioteca, de modo que el reproductor no aparece vacio y «siguiente» continua por donde
+    /// se iba. No suena nada por si sola: abrir el reproductor no es lo mismo que darle al play.
+    /// </summary>
+    private void RestoreLastSong()
+    {
+        if (_playback.Current is not null || _settings.LastSongId <= 0)
+            return;
+
+        var songs = _library.Songs;
+        var index = -1;
+        for (var i = 0; i < songs.Count; i++)
+        {
+            if (songs[i].Id == _settings.LastSongId)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        // La cancion pudo borrarse del dispositivo desde la ultima vez: entonces no hay nada que
+        // recuperar y el reproductor arranca vacio, como antes.
+        if (index >= 0)
+            _playback.Prepare(songs, index);
     }
 
     /// <summary>

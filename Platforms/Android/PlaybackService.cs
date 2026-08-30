@@ -75,7 +75,28 @@ public sealed class PlaybackService : IPlaybackService
         }
 
         // El servicio aun no existe: se deja la orden preparada y el se encarga al arrancar.
-        MusicService.PendingRequest = (queue, index);
+        MusicService.PendingRequest = (queue, index, true);
+        EnsureServiceStarted();
+    }
+
+    public void Prepare(IReadOnlyList<Song> queue, int index)
+    {
+        if (queue.Count == 0)
+            return;
+
+        // Si ya hay algo cargado no se toca: recuperar la ultima cancion no puede pisar lo que el
+        // usuario este escuchando ahora mismo.
+        if (MusicService.Instance is { Current: not null })
+            return;
+
+        if (MusicService.Instance is { } service)
+        {
+            service.PlayQueue(queue, index, autoPlay: false);
+            EnsureServiceStarted();
+            return;
+        }
+
+        MusicService.PendingRequest = (queue, index, false);
         EnsureServiceStarted();
     }
 

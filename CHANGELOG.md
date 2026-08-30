@@ -2,6 +2,21 @@
 
 Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11).
 
+## 2026.08.29.1
+
+- **Ficha de la canción con letra**: nueva pantalla con los datos de la pista, la reseña del grupo y
+  la **letra, que va marcando la línea que suena** cuando el fichero trae la letra sincronizada. Se
+  llega desde el botón de información de *Reproduciendo* y desde el menú de la canción.
+- La letra sale de los ficheros del propio usuario: etiqueta USLT/SYLT del MP3, comentarios Vorbis
+  del FLAC o un `.lrc` con el mismo nombre. No se descarga ni se genera nada.
+- **Buscar información** al editar una canción: rellena título, grupo, álbum, año y pista con lo
+  que devuelve MusicBrainz. Respeta el interruptor de búsqueda en línea, que sigue apagado por
+  defecto.
+- **Al abrir la aplicación se recupera la última canción escuchada**, cargada y en pausa. Antes se
+  guardaba en los ajustes y no la leía nadie.
+- **Corregido**: al pasar a una canción sin carátula se quedaba viéndose la portada de la anterior,
+  tanto en *Reproduciendo* como en el mini reproductor.
+
 ---
 
 ## 2026.08.28.1 — 2026-08-28

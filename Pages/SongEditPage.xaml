@@ -56,6 +56,12 @@
         </ScrollView>
 
         <VerticalStackLayout Grid.Row="2" Padding="12" Spacing="8">
+            <!-- Buscar la ficha en internet y rellenar los campos con lo que se encuentre. -->
+            <Button x:Name="LookupButton"
+                    Style="{StaticResource OutlineButton}"
+                    ImageSource="ic_search.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnLookupClicked" />
             <Button x:Name="ResetButton"
                     Style="{StaticResource OutlineButton}"
                     ImageSource="ic_refresh.png"

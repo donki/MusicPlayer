@@ -25,8 +25,28 @@
                         </Grid>
                     </Border>
 
-                    <Label x:Name="ArtistNameLabel" FontSize="22" FontAttributes="Bold" />
-                    <Label x:Name="ArtistCountLabel" Style="{StaticResource HintText}" />
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                            <Label x:Name="ArtistNameLabel" FontSize="22" FontAttributes="Bold" />
+                            <Label x:Name="ArtistCountLabel" Style="{StaticResource HintText}" />
+                        </VerticalStackLayout>
+
+                        <!-- Renombrar el grupo en todas sus canciones de una vez. -->
+                        <ImageButton Grid.Column="1"
+                                     x:Name="RenameButton"
+                                     Style="{StaticResource RowIconButton}"
+                                     Source="ic_edit.png"
+                                     Clicked="OnRenameGroupClicked" />
+
+                        <!-- Vuelve a buscar foto y resena, saltandose lo ya consultado. -->
+                        <ImageButton Grid.Column="2"
+                                     x:Name="RefreshInfoButton"
+                                     Style="{StaticResource RowIconButton}"
+                                     Source="ic_refresh.png"
+                                     Clicked="OnRefreshInfoClicked" />
+                    </Grid>
+
+                    <ActivityIndicator x:Name="InfoBusy" IsRunning="False" IsVisible="False" HorizontalOptions="Start" />
 
                     <!-- Resena recortada: la ficha es para escuchar musica, no para leer. El boton
                          despliega el texto entero y vuelve a recogerlo. -->

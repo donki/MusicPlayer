@@ -100,7 +100,13 @@ public partial class NowPlayingPage : ContentPage
         if (_shownSongId != song.Id)
         {
             _shownSongId = song.Id;
-            Artwork.Source = _library.GetAlbumArt(song);
+
+            // Sin caratula propia se pinta la del artista. Cuando no hay ninguna hay que ESCONDER
+            // la imagen, no solo dejarla sin origen: al pasar de pista, la vista nativa conserva
+            // el ultimo mapa de bits y se quedaba la portada anterior sobre la cancion nueva.
+            var art = _library.GetArtworkOrArtistArt(song);
+            Artwork.Source = art;
+            Artwork.IsVisible = art is not null;
         }
 
         TitleLabel.Text = song.Title.Length > 0 ? song.Title : _localization["UnknownTitle"];
@@ -187,6 +193,18 @@ public partial class NowPlayingPage : ContentPage
         }]);
 
         Refresh();
+    }
+
+    /// <summary>
+    /// Ficha de la cancion: datos, resena del grupo y letra. Es la misma pagina que se abre desde
+    /// la biblioteca, para no tener dos sitios donde mirar lo mismo.
+    /// </summary>
+    private async void OnInfoClicked(object? sender, EventArgs e)
+    {
+        if (_playback.Current is not { } song)
+            return;
+
+        await Navigation.PushModalAsync(new SongInfoPage(song));
     }
 
     private async void OnAddToPlaylistClicked(object? sender, EventArgs e)

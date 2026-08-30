@@ -32,6 +32,13 @@ public interface IPlaybackService
     /// <summary>Sustituye la cola y empieza a reproducir por la posicion indicada.</summary>
     void Play(IReadOnlyList<Song> queue, int index);
 
+    /// <summary>
+    /// Deja la cola cargada por la posicion indicada pero **en pausa**, sin pedir el foco de audio.
+    /// Es lo que usa el arranque para recuperar la ultima cancion escuchada sin ponerse a sonar
+    /// solo ni callar lo que suene en otra aplicacion.
+    /// </summary>
+    void Prepare(IReadOnlyList<Song> queue, int index);
+
     void TogglePlayPause();
 
     void Next();

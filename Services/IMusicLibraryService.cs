@@ -74,6 +74,17 @@ public interface IMusicLibraryService
     ImageSource? GetArtistArt(ArtistGroup artist);
 
     /// <summary>
+    /// Imagen para pintar junto a una cancion: su caratula si la tiene y, si no, la del artista.
+    /// </summary>
+    /// <remarks>
+    /// Una biblioteca real esta llena de canciones sin caratula, y dejar el hueco vacio hace que
+    /// la lista parezca rota. La del artista es lo mas parecido que hay y ya esta descargada. Sigue
+    /// devolviendo <c>null</c> cuando no hay ni una ni otra, porque entonces el marcador de
+    /// posicion es lo honesto: inventarse una imagen seria peor que no poner ninguna.
+    /// </remarks>
+    ImageSource? GetArtworkOrArtistArt(Song song);
+
+    /// <summary>
     /// Corrige las etiquetas de una cancion. La correccion se guarda siempre en la aplicacion, que
     /// es lo que hace que la busqueda y la agrupacion acierten a partir de ese momento, y ademas se
     /// intenta trasladar al indice de medios del sistema para que la vean las demas aplicaciones.

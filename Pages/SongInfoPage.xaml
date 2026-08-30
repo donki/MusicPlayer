@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:MusicPlayer.Pages"
+             x:Class="MusicPlayer.Pages.SongInfoPage">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Cabecera propia: la pagina se abre como modal y no tiene barra de Shell. -->
+        <Grid Grid.Row="0" Style="{StaticResource HeaderBar}" ColumnDefinitions="*,48,48" Padding="16,44,8,8">
+            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                <Label x:Name="HeaderTitle" Style="{StaticResource HeaderTitle}" />
+                <Label x:Name="HeaderSubtitle" FontSize="12" TextColor="{StaticResource OnPrimaryMuted}"
+                       LineBreakMode="TailTruncation" />
+            </VerticalStackLayout>
+            <ImageButton Grid.Column="1"
+                         Style="{StaticResource HeaderIconButton}"
+                         Source="ic_edit_w.png"
+                         Clicked="OnEditClicked" />
+            <ImageButton Grid.Column="2"
+                         Style="{StaticResource HeaderIconButton}"
+                         Source="ic_close_w.png"
+                         Clicked="OnCloseClicked" />
+        </Grid>
+
+        <ScrollView Grid.Row="1" x:Name="Scroller">
+            <VerticalStackLayout Padding="12" Spacing="10">
+
+                <!-- Caratula y datos de la pista -->
+                <Border Style="{StaticResource Card}">
+                    <Grid ColumnDefinitions="96,*" ColumnSpacing="12" Padding="14">
+                        <Border Grid.Column="0" Style="{StaticResource ArtworkPlaceholder}"
+                                WidthRequest="96" HeightRequest="96" VerticalOptions="Start">
+                            <Grid>
+                                <Image Source="ic_artwork.png" Aspect="AspectFit" Margin="24" />
+                                <Image x:Name="Artwork" Aspect="AspectFill" />
+                            </Grid>
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                            <Label x:Name="TitleLabel" Style="{StaticResource CardTitle}" />
+                            <Label x:Name="ArtistLabel" Style="{StaticResource BodyText}" />
+                            <Label x:Name="AlbumLabel" Style="{StaticResource HintText}" />
+                            <Label x:Name="DetailsLabel" Style="{StaticResource HintText}" />
+                            <Label x:Name="FileLabel" Style="{StaticResource HintText}" FontSize="11"
+                                   LineBreakMode="MiddleTruncation" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Ficha del grupo -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Padding="14" Spacing="10">
+                        <Label x:Name="ArtistSectionTitle" Style="{StaticResource CardTitle}" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Border Grid.Column="0" x:Name="ArtistImageFrame"
+                                    Style="{StaticResource ArtworkPlaceholder}"
+                                    WidthRequest="72" HeightRequest="72" VerticalOptions="Start"
+                                    IsVisible="False">
+                                <Image x:Name="ArtistImage" Aspect="AspectFill" />
+                            </Border>
+                            <Label Grid.Column="1" x:Name="ArtistDescription" Style="{StaticResource BodyText}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Letra -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Padding="14" Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" x:Name="LyricsSectionTitle" Style="{StaticResource CardTitle}" />
+                            <ActivityIndicator Grid.Column="1" x:Name="LyricsBusy" IsRunning="False" IsVisible="False"
+                                               HeightRequest="20" WidthRequest="20" />
+                        </Grid>
+
+                        <Label x:Name="LyricsSourceLabel" Style="{StaticResource HintText}" IsVisible="False" />
+                        <Label x:Name="LyricsEmptyLabel" Style="{StaticResource HintText}" IsVisible="False" />
+
+                        <!-- Sin scroll propio: crece dentro del ScrollView de la pagina, que es lo
+                             que permite leer la letra entera de un tiron. -->
+                        <VerticalStackLayout x:Name="LyricsBox" Spacing="2">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="pages:LyricRow">
+                                    <Label Text="{Binding Text}"
+                                           FontSize="{Binding FontSize}"
+                                           FontAttributes="{Binding FontAttributes}"
+                                           TextColor="{Binding TextColor}"
+                                           Opacity="{Binding Opacity}"
+                                           Padding="0,3" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>
