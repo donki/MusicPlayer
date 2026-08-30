@@ -368,11 +368,45 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     }
 
     /// <summary>
-    /// Solo se deja navegar la biblioteca a la propia aplicacion y a los controladores de medios
-    /// del sistema (Android Auto, el asistente, la interfaz del sistema), que son los que tienen
-    /// concedido <c>MEDIA_CONTENT_CONTROL</c>. Es mínimo privilegio: la lista de musica del usuario
-    /// no tiene por que estar abierta a cualquier app instalada.
+    /// Controladores de medios que pueden navegar la biblioteca, ademas de la propia aplicacion.
     /// </summary>
+    /// <remarks>
+    /// Android Auto proyectado desde el movil, el simulador de escritorio, el asistente y el
+    /// puente de Bluetooth, que es el que usa el equipo del coche cuando no va por cable.
+    /// </remarks>
+    private static readonly string[] MediaBrowserCallers =
+    [
+        "com.google.android.projection.gearhead",
+        "com.google.android.autosimulator",
+        "com.google.android.carassistant",
+        "com.google.android.googlequicksearchbox",
+        "com.google.android.wearable.app",
+        "com.android.bluetooth",
+        "com.android.systemui",
+    ];
+
+    /// <summary>
+    /// Decide si un llamante puede navegar la biblioteca.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Por que no basta con el permiso.</b> Antes solo se aceptaba a quien tuviera
+    /// concedido <c>MEDIA_CONTENT_CONTROL</c>. Suena razonable, pero <b>Android Auto no lo
+    /// tiene</b>: es un permiso reservado a aplicaciones privilegiadas y Auto se instala desde
+    /// Play como una mas. Comprobado en el movil —Auto instalado y sin ese permiso—, y por eso el
+    /// coche no mostraba ni el icono: <c>OnGetRoot</c> devolvia null y para Auto la aplicacion
+    /// sencillamente no existia.</para>
+    ///
+    /// <para><b>Como se valida ahora.</b> Por nombre de paquete conocido, pero exigiendo ademas
+    /// que sea del sistema o que lo haya instalado Play. Un nombre de paquete a secas se lo puede
+    /// poner cualquier APK de fuera; pasando por Play, no. Se mantiene el permiso como via
+    /// alternativa para los controladores privilegiados de verdad.</para>
+    ///
+    /// <para><b>Por que no se fijan los certificados.</b> Es lo que hace el ejemplo oficial de
+    /// Google, y es mas estricto, pero obliga a llevar escritas las huellas de cada controlador.
+    /// Si una huella cambia o se copia mal, esto vuelve a fallar <i>en silencio</i> —exactamente el
+    /// fallo que se esta arreglando— y solo se nota subiendose al coche. Se prefiere una
+    /// comprobacion que no pueda quedarse obsoleta sin que nadie se entere.</para>
+    /// </remarks>
     private bool IsCallerAllowed(string clientPackageName)
     {
         if (string.Equals(clientPackageName, PackageName, StringComparison.Ordinal))
@@ -380,14 +414,48 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         try
         {
-            return PackageManager?.CheckPermission(
-                global::Android.Manifest.Permission.MediaContentControl, clientPackageName) == Permission.Granted;
+            if (PackageManager?.CheckPermission(
+                    global::Android.Manifest.Permission.MediaContentControl,
+                    clientPackageName) == Permission.Granted)
+            {
+                return true;
+            }
+
+            if (!MediaBrowserCallers.Contains(clientPackageName, StringComparer.Ordinal))
+                return false;
+
+            return IsSystemOrFromPlay(clientPackageName);
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "The caller {Package} could not be verified.", clientPackageName);
             return false;
         }
+    }
+
+    /// <summary>Del sistema, o instalado desde Play. Lo que un APK de fuera no puede fingir.</summary>
+    private bool IsSystemOrFromPlay(string clientPackageName)
+    {
+        var manager = PackageManager;
+        if (manager is null)
+            return false;
+
+        var info = manager.GetApplicationInfo(clientPackageName, 0);
+        if (info.Flags.HasFlag(ApplicationInfoFlags.System) ||
+            info.Flags.HasFlag(ApplicationInfoFlags.UpdatedSystemApp))
+        {
+            return true;
+        }
+
+        // GetInstallSourceInfo es de Android 11; por debajo queda el metodo antiguo, en desuso pero
+        // el unico que hay. Sin instalador conocido (carga lateral) no se acepta.
+        var installer = OperatingSystem.IsAndroidVersionAtLeast(30)
+            ? manager.GetInstallSourceInfo(clientPackageName)?.InstallingPackageName
+#pragma warning disable CS0618
+            : manager.GetInstallerPackageName(clientPackageName);
+#pragma warning restore CS0618
+
+        return installer is "com.android.vending" or "com.google.android.feedback";
     }
 
     // ==================================================================================
