@@ -256,6 +256,20 @@ public sealed class MusicLibraryService : IMusicLibraryService
         return null;
     }
 
+    public ImageSource? GetArtworkOrArtistArt(Song song)
+    {
+        if (GetAlbumArt(song) is { } own)
+            return own;
+
+        // Se busca por el nombre que se muestra, no por la etiqueta cruda: es el mismo con el que
+        // se agrupa la biblioteca, asi que una cancion de un grupo renombrado sigue encontrandolo.
+        var name = song.ResolveGroupName(preferComposer: false);
+        if (name.Length == 0)
+            return null;
+
+        return FindArtist(name) is { } artist ? GetArtistArt(artist) : null;
+    }
+
     public async Task<DeleteOutcome> DeleteAsync(IReadOnlyList<Song> songs)
     {
         if (songs.Count == 0)

@@ -68,14 +68,14 @@ public sealed class ArtistInfoService : IArtistInfoService, IDisposable
         }
     }
 
-    public async Task<ArtistInfo> GetAsync(string artistName, CancellationToken cancellationToken = default)
+    public async Task<ArtistInfo> GetAsync(string artistName, bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(artistName))
             return new ArtistInfo(null, null);
 
         var name = artistName.Trim();
 
-        if (TryReadCache(name, out var cached))
+        if (!forceRefresh && TryReadCache(name, out var cached))
             return cached;
 
         // Sin permiso explicito no se toca la red (constitucion 3).
@@ -86,7 +86,7 @@ public sealed class ArtistInfoService : IArtistInfoService, IDisposable
         try
         {
             // Otra consulta pudo rellenar el cache mientras se esperaba el turno.
-            if (TryReadCache(name, out cached))
+            if (!forceRefresh && TryReadCache(name, out cached))
                 return cached;
 
             var fetched = await FetchAsync(name, cancellationToken).ConfigureAwait(false);

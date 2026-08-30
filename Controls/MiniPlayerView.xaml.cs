@@ -62,7 +62,11 @@ public partial class MiniPlayerView : ContentView
         var artist = song.ResolveGroupName(preferComposer: false);
         ArtistLabel.Text = artist.Length > 0 ? artist : _localization["UnknownArtist"];
 
-        Artwork.Source = _library.GetAlbumArt(song);
+        // Sin caratula propia se pinta la del artista. Se sigue escondiendo si tampoco hay
+        // ninguna: si no, la miniatura se queda con la imagen de la cancion anterior.
+        var art = _library.GetArtworkOrArtistArt(song);
+        Artwork.Source = art;
+        Artwork.IsVisible = art is not null;
         PlayPauseButton.Source = _playback.IsPlaying ? "ic_pause_w.png" : "ic_play_w.png";
 
         RefreshProgress();

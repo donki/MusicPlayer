@@ -16,6 +16,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISettingsService, SettingsService>();
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IArtistInfoService, ArtistInfoService>();
+        builder.Services.AddSingleton<ISongLookupService, SongLookupService>();
         builder.Services.AddSingleton<IPlaylistService, PlaylistService>();
         builder.Services.AddSingleton<ISongTagsService, SongTagsService>();
         builder.Services.AddSingleton<UpdateService>();
@@ -25,6 +26,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMediaAccessService, Platforms.Android.MediaAccessService>();
         builder.Services.AddSingleton<IMusicLibraryService, Platforms.Android.MusicLibraryService>();
         builder.Services.AddSingleton<IPlaybackService, Platforms.Android.PlaybackService>();
+        builder.Services.AddSingleton<ILyricsService, Platforms.Android.LyricsService>();
 #endif
 
         // Paginas: se resuelven por el contenedor cuando la navegacion lo permite y, si no, por su

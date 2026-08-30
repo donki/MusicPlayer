@@ -22,6 +22,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
     private readonly IArtistInfoService _artistInfo;
     private readonly ISettingsService _settings;
     private readonly ILocalizationService _localization;
+    private readonly IToastService _toast;
 
     private readonly ObservableCollection<SongRow> _rows = [];
     private readonly SongSelection _selection;
@@ -35,7 +36,8 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
             ServiceHelper.GetRequiredService<IPlaybackService>(),
             ServiceHelper.GetRequiredService<IArtistInfoService>(),
             ServiceHelper.GetRequiredService<ISettingsService>(),
-            ServiceHelper.GetRequiredService<ILocalizationService>())
+            ServiceHelper.GetRequiredService<ILocalizationService>(),
+            ServiceHelper.GetRequiredService<IToastService>())
     {
     }
 
@@ -44,7 +46,8 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         IPlaybackService playback,
         IArtistInfoService artistInfo,
         ISettingsService settings,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IToastService toast)
     {
         InitializeComponent();
 
@@ -53,6 +56,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         _artistInfo = artistInfo;
         _settings = settings;
         _localization = localization;
+        _toast = toast;
 
         SongsView.ItemsSource = _rows;
         _selection = new SongSelection(this, Selection, _rows);
@@ -240,6 +244,112 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         var queue = _rows.Select(item => item.Song).ToList();
         var index = queue.FindIndex(song => song.Id == row.Song.Id);
         _playback.Play(queue, index < 0 ? 0 : index);
+    }
+
+    /// <summary>
+    /// Vuelve a buscar la ficha del grupo y **actualiza la foto en pantalla**. Fuerza la consulta:
+    /// si la primera vez no se encontro nada, el resultado vacio se guarda 30 dias y sin forzar el
+    /// boton no haria nada (nota de autor del 2026-08-29).
+    /// </summary>
+    private async void OnRefreshInfoClicked(object? sender, EventArgs e)
+    {
+        if (_artist is null)
+            return;
+
+        if (!_artistInfo.IsEnabled)
+        {
+            LookupHintCard.IsVisible = true;
+            _toast.Show(_localization["ArtistLookupDisabled"]);
+            return;
+        }
+
+        RefreshInfoButton.IsEnabled = false;
+        InfoBusy.IsRunning = true;
+        InfoBusy.IsVisible = true;
+
+        try
+        {
+            var info = await _artistInfo.GetAsync(_artistName, forceRefresh: true);
+
+            _artist.ImagePath = info.ImagePath;
+            _artist.Description = info.Description;
+
+            // La imagen se reasigna siempre, tambien cuando no hay: asi no se queda la anterior.
+            ArtistImage.Source = _library.GetArtistArt(_artist);
+            ShowDescription(info.Description);
+
+            _toast.Show(info.ImagePath is null && info.Description is null
+                ? _localization["InfoNotFound"]
+                : _localization["InfoUpdated"]);
+        }
+        finally
+        {
+            InfoBusy.IsRunning = false;
+            InfoBusy.IsVisible = false;
+            RefreshInfoButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Renombra el grupo en todas sus canciones. Se corrige el campo que de verdad esta dando el
+    /// nombre en cada una (artista del album, artista o compositor): tocar otro dejaria la cancion
+    /// agrupada donde estaba.
+    /// </summary>
+    private async void OnRenameGroupClicked(object? sender, EventArgs e)
+    {
+        if (_artist is null)
+            return;
+
+        var newName = await SocShared.ModernDialog.PromptAsync(this,
+            _localization["RenameGroupTitle"], null,
+            _localization["Save"], _localization["Cancel"],
+            initialValue: _artistName);
+
+        newName = newName?.Trim();
+        if (string.IsNullOrEmpty(newName) || newName == _artistName)
+            return;
+
+        RenameButton.IsEnabled = false;
+        InfoBusy.IsRunning = true;
+        InfoBusy.IsVisible = true;
+
+        var changed = 0;
+        try
+        {
+            var preferComposer = _settings.PreferComposer;
+
+            foreach (var song in _artist.Songs.ToList())
+            {
+                var tags = SongTags.From(song);
+
+                // Que campo estaba mandando en la agrupacion de ESTA cancion.
+                SongTags updated;
+                if (preferComposer && song.Composer.Length > 0)
+                    updated = tags with { Composer = newName };
+                else if (song.AlbumArtist.Length > 0)
+                    updated = tags with { AlbumArtist = newName };
+                else if (song.Artist.Length > 0)
+                    updated = tags with { Artist = newName };
+                else if (song.Composer.Length > 0)
+                    updated = tags with { Composer = newName };
+                else
+                    updated = tags with { Artist = newName };
+
+                await _library.UpdateTagsAsync(song, updated);
+                changed++;
+            }
+        }
+        finally
+        {
+            InfoBusy.IsRunning = false;
+            InfoBusy.IsVisible = false;
+            RenameButton.IsEnabled = true;
+        }
+
+        _toast.Show(_localization.Format("GroupRenamed", changed));
+
+        // La ficha del grupo anterior ya no existe: se vuelve a la biblioteca.
+        await Shell.Current.GoToAsync("//LibraryPage");
     }
 
     private async void OnEnableLookupClicked(object? sender, EventArgs e)

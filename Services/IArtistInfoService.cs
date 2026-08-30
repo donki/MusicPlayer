@@ -24,7 +24,12 @@ public interface IArtistInfoService
     /// Foto y resena del grupo, del cache si ya se consulto. Devuelve un resultado vacio, sin
     /// tocar la red, si el usuario no ha activado la busqueda en linea.
     /// </summary>
-    Task<ArtistInfo> GetAsync(string artistName, CancellationToken cancellationToken = default);
+    /// <param name="forceRefresh">
+    /// Salta el cache y vuelve a preguntar. Es lo que hace falta cuando el usuario pide la busqueda
+    /// a proposito: si la primera vez no se encontro nada, el cache negativo dura 30 dias y sin esto
+    /// el boton no haria absolutamente nada.
+    /// </param>
+    Task<ArtistInfo> GetAsync(string artistName, bool forceRefresh = false, CancellationToken cancellationToken = default);
 
     /// <summary>Imagen ya descargada de un grupo, sin consultar la red. Para pintar la rejilla.</summary>
     string? GetCachedImagePath(string artistName);

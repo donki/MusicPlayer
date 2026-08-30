@@ -76,7 +76,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     /// Cola pedida antes de que el servicio existiera. Al pulsar una cancion con el servicio aun
     /// sin arrancar, la orden se deja aqui y el servicio la recoge en <c>OnCreate</c>.
     /// </summary>
-    public static (IReadOnlyList<Song> Queue, int Index)? PendingRequest { get; set; }
+    public static (IReadOnlyList<Song> Queue, int Index, bool AutoPlay)? PendingRequest { get; set; }
 
     private MediaSessionCompat? _session;
     private MediaPlayer? _player;
@@ -89,6 +89,13 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     private int _orderIndex = -1;
     private bool _isForeground;
     private bool _wasPlayingBeforeFocusLoss;
+
+    /// <summary>
+    /// La pista se deja cargada y en pausa, sin sonar. Es lo que hace falta al abrir la aplicacion
+    /// para recuperar la ultima cancion: aparece lista para darle al play, pero nadie quiere que un
+    /// reproductor se ponga a sonar solo al abrirlo.
+    /// </summary>
+    private bool _startPaused;
 
     public bool Shuffle { get; private set; }
 
@@ -164,7 +171,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         if (PendingRequest is { } pending)
         {
             PendingRequest = null;
-            PlayQueue(pending.Queue, pending.Index);
+            PlayQueue(pending.Queue, pending.Index, pending.AutoPlay);
         }
     }
 
@@ -387,11 +394,11 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     //  Ordenes de reproduccion
     // ==================================================================================
 
-    public void PlayQueue(IReadOnlyList<Song> queue, int index)
+    public void PlayQueue(IReadOnlyList<Song> queue, int index, bool autoPlay = true)
     {
         _queue = queue.ToList();
         BuildOrder(startAt: Math.Clamp(index, 0, Math.Max(_queue.Count - 1, 0)));
-        StartCurrent();
+        StartCurrent(autoPlay);
     }
 
     public void PlayFromMediaId(string? mediaId)
@@ -625,14 +632,18 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         }
     }
 
-    private void StartCurrent()
+    private void StartCurrent(bool autoPlay = true)
     {
         var song = Current;
         if (song is null)
             return;
 
-        if (!RequestAudioFocus())
+        // Cargando en pausa NO se pide el foco de audio: abrir Music Player no puede callar lo que
+        // este sonando en otra aplicacion.
+        if (autoPlay && !RequestAudioFocus())
             return;
+
+        _startPaused = !autoPlay;
 
         ReleasePlayer();
 
@@ -671,6 +682,14 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
     private void OnPlayerPrepared(object? sender, EventArgs e)
     {
+        if (_startPaused)
+        {
+            // Cargada y lista, pero muda hasta que el usuario pulse play.
+            _startPaused = false;
+            PublishPlaybackState();
+            return;
+        }
+
         try
         {
             _player?.Start();
