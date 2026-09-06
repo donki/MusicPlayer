@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Aleatorio, para el boton propio de Android Auto. Silueta blanca sobre transparente: el coche lo
+    tiñe con el color de su tema, igual que el icono de la notificacion.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="24dp" android:height="24dp"
+        android:viewportWidth="24" android:viewportHeight="24"
+        android:tint="#FFFFFF">
+    <path android:fillColor="#FFFFFF"
+          android:pathData="M10.6,9.4L8.5,7.3C7.9,6.7 7.1,6.3 6.2,6.3H3v2h3.2c0.4,0 0.8,0.2 1.1,0.5l2.1,2.1L10.6,9.4z" />
+    <path android:fillColor="#FFFFFF"
+          android:pathData="M14.8,6.3l1.6,1.6l-9,9C7.1,17.2 6.7,17.4 6.2,17.4H3v2h3.2c0.9,0 1.8,-0.4 2.4,-1l9,-9l1.6,1.6V6.3H14.8z" />
+    <path android:fillColor="#FFFFFF"
+          android:pathData="M16.4,16.1l-1.6,1.6h4.4v-4.4l-1.6,1.6l-2.4,-2.4l-1.4,1.4L16.4,16.1z" />
+</vector>

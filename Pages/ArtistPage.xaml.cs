@@ -20,6 +20,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
     private readonly IMusicLibraryService _library;
     private readonly IPlaybackService _playback;
     private readonly IArtistInfoService _artistInfo;
+    private readonly ICustomArtService _customArt;
     private readonly ISettingsService _settings;
     private readonly ILocalizationService _localization;
     private readonly IToastService _toast;
@@ -35,6 +36,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
             ServiceHelper.GetRequiredService<IMusicLibraryService>(),
             ServiceHelper.GetRequiredService<IPlaybackService>(),
             ServiceHelper.GetRequiredService<IArtistInfoService>(),
+            ServiceHelper.GetRequiredService<ICustomArtService>(),
             ServiceHelper.GetRequiredService<ISettingsService>(),
             ServiceHelper.GetRequiredService<ILocalizationService>(),
             ServiceHelper.GetRequiredService<IToastService>())
@@ -45,6 +47,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         IMusicLibraryService library,
         IPlaybackService playback,
         IArtistInfoService artistInfo,
+        ICustomArtService customArt,
         ISettingsService settings,
         ILocalizationService localization,
         IToastService toast)
@@ -54,6 +57,7 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
         _library = library;
         _playback = playback;
         _artistInfo = artistInfo;
+        _customArt = customArt;
         _settings = settings;
         _localization = localization;
         _toast = toast;
@@ -251,6 +255,91 @@ public partial class ArtistPage : ContentPage, IQueryAttributable
     /// si la primera vez no se encontro nada, el resultado vacio se guarda 30 dias y sin forzar el
     /// boton no haria nada (nota de autor del 2026-08-29).
     /// </summary>
+    /// <summary>
+    /// Pone la foto del grupo a mano: del aparato, de una direccion, o buscandola en Google.
+    /// </summary>
+    /// <remarks>
+    /// La que se elija manda sobre la descargada, asi que este es el arreglo cuando la busqueda en
+    /// linea no encuentra al grupo o trae al equivocado — que con nombres cortos o comunes pasa.
+    /// </remarks>
+    private async void OnArtClicked(object? sender, EventArgs e)
+    {
+        if (_artist is null)
+            return;
+
+        var puesta = _customArt.ForArtist(_artist.Name) is not null;
+
+        switch (await ArtPicker.PreguntarAsync(this, _localization, puesta))
+        {
+            case ArtPicker.Origen.Dispositivo:
+                await PonerImagenAsync(async () =>
+                {
+                    var foto = await MediaPicker.Default.PickPhotoAsync();
+                    return foto is null ? null : await foto.OpenReadAsync();
+                });
+                break;
+
+            case ArtPicker.Origen.Direccion:
+                await PonerImagenAsync(async () =>
+                {
+                    var url = await SocShared.ModernDialog.PromptAsync(
+                        this, _localization["ArtUrlTitle"], _localization["ArtUrlMessage"],
+                        _localization["Ok"], _localization["Cancel"], placeholder: "https://");
+
+                    return string.IsNullOrWhiteSpace(url)
+                        ? null
+                        : new MemoryStream(await _customArt.DownloadAsync(url));
+                });
+                break;
+
+            case ArtPicker.Origen.Buscar:
+                await ArtPicker.BuscarAsync(_artist.Name);
+                break;
+
+            case ArtPicker.Origen.Quitar:
+                _customArt.ClearArtist(_artist.Name);
+                await RecargarAsync();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Vuelve a leer la biblioteca y repinta.
+    /// </summary>
+    /// <remarks>
+    /// La ruta de la imagen se resuelve al agrupar las canciones (<c>ArtistGroup.ImagePath</c>), asi
+    /// que sin volver a explorar la foto nueva no se veria hasta el siguiente arranque.
+    /// </remarks>
+    private async Task RecargarAsync()
+    {
+        await _library.ScanAsync();
+        Load();
+    }
+
+    /// <summary>Guarda lo que devuelva <paramref name="abrir"/> como foto del grupo.</summary>
+    private async Task PonerImagenAsync(Func<Task<Stream?>> abrir)
+    {
+        if (_artist is null)
+            return;
+
+        try
+        {
+            await using var imagen = await abrir();
+            if (imagen is null)
+                return;
+
+            await _customArt.SetArtistAsync(_artist.Name, imagen);
+
+            await RecargarAsync();
+            _toast.Show(_localization["ArtSaved"]);
+        }
+        catch (Exception ex)
+        {
+            await SocShared.ModernDialog.AlertAsync(
+                this, _localization["ArtFailed"], ex.Message, _localization["Ok"]);
+        }
+    }
+
     private async void OnRefreshInfoClicked(object? sender, EventArgs e)
     {
         if (_artist is null)

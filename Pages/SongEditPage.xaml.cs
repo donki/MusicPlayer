@@ -16,6 +16,7 @@ public partial class SongEditPage : ContentPage
     private readonly ILocalizationService _localization;
     private readonly IToastService _toast;
     private readonly ISongLookupService _lookup;
+    private readonly ICustomArtService _customArt;
     private readonly Song _song;
 
     public SongEditPage(Song song)
@@ -28,12 +29,88 @@ public partial class SongEditPage : ContentPage
         _localization = ServiceHelper.GetRequiredService<ILocalizationService>();
         _toast = ServiceHelper.GetRequiredService<IToastService>();
         _lookup = ServiceHelper.GetRequiredService<ISongLookupService>();
+        _customArt = ServiceHelper.GetRequiredService<ICustomArtService>();
 
         ApplyTexts();
         Fill(SongTags.From(song));
 
         // Solo se puede volver atras si hay algo que deshacer.
         ResetButton.IsVisible = _tags.Find(song.Id) is not null;
+    }
+
+    /// <summary>
+    /// Le pone caratula a esta cancion: del aparato, de una direccion, o buscandola en Google.
+    /// </summary>
+    /// <remarks>
+    /// Es lo que arregla una biblioteca real: canciones sueltas sin caratula, y recopilatorios
+    /// donde la del album no dice nada de la cancion. La elegida manda sobre la del album.
+    /// </remarks>
+    private async void OnArtClicked(object? sender, EventArgs e)
+    {
+        var puesta = _customArt.ForSong(_song.Id) is not null;
+
+        switch (await ArtPicker.PreguntarAsync(this, _localization, puesta))
+        {
+            case ArtPicker.Origen.Dispositivo:
+                await PonerImagenAsync(async () =>
+                {
+                    var foto = await MediaPicker.Default.PickPhotoAsync();
+                    return foto is null ? null : await foto.OpenReadAsync();
+                });
+                break;
+
+            case ArtPicker.Origen.Direccion:
+                await PonerImagenAsync(async () =>
+                {
+                    var url = await SocShared.ModernDialog.PromptAsync(
+                        this, _localization["ArtUrlTitle"], _localization["ArtUrlMessage"],
+                        _localization["Ok"], _localization["Cancel"], placeholder: "https://");
+
+                    return string.IsNullOrWhiteSpace(url)
+                        ? null
+                        : new MemoryStream(await _customArt.DownloadAsync(url));
+                });
+                break;
+
+            case ArtPicker.Origen.Buscar:
+                // Lo que se escriba ahora en el formulario manda sobre lo que traia la cancion: es
+                // lo que el usuario esta arreglando, y si no hay nada, queda el nombre del fichero.
+                await ArtPicker.BuscarAsync(ArtPicker.TextoDeBusqueda(Actual()));
+                break;
+
+            case ArtPicker.Origen.Quitar:
+                _customArt.ClearSong(_song.Id);
+                _toast.Show(_localization["ArtSaved"]);
+                break;
+        }
+    }
+
+    /// <summary>La cancion con lo que hay escrito ahora mismo en el formulario.</summary>
+    private Song Actual() => new SongTags(
+        TitleEntry.Text ?? string.Empty,
+        ArtistEntry.Text ?? string.Empty,
+        AlbumArtistEntry.Text ?? string.Empty,
+        AlbumEntry.Text ?? string.Empty,
+        ComposerEntry.Text ?? string.Empty,
+        _song.Track,
+        _song.Year).ApplyTo(_song);
+
+    private async Task PonerImagenAsync(Func<Task<Stream?>> abrir)
+    {
+        try
+        {
+            await using var imagen = await abrir();
+            if (imagen is null)
+                return;
+
+            await _customArt.SetSongAsync(_song.Id, imagen);
+            _toast.Show(_localization["ArtSaved"]);
+        }
+        catch (Exception ex)
+        {
+            await SocShared.ModernDialog.AlertAsync(
+                this, _localization["ArtFailed"], ex.Message, _localization["Ok"]);
+        }
     }
 
     private void ApplyTexts()
@@ -50,6 +127,7 @@ public partial class SongEditPage : ContentPage
         YearCaption.Text = _localization["TagYear"];
 
         ScopeHint.Text = _localization["EditTagsScope"];
+        ArtButton.Text = _localization["ArtTitle"];
         LookupButton.Text = _localization["LookupInfo"];
         ResetButton.Text = _localization["EditTagsReset"];
         SaveButton.Text = _localization["Save"];

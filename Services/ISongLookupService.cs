@@ -41,8 +41,12 @@ public sealed record SongLookupResult(
 /// <remarks>
 /// Misma regla que <see cref="IArtistInfoService"/>: apagado por defecto y solo con el permiso
 /// explicito del usuario (constitucion 3). Lo unico que sale del dispositivo es el titulo y el
-/// nombre del grupo que ya estan escritos en el formulario. La fuente es MusicBrainz, cuyos datos
-/// son de dominio publico (CC0).
+/// nombre del grupo que ya estan escritos en el formulario.
+///
+/// Se prueban tres fuentes, en cascada y por este orden: <b>MusicBrainz</b> (datos de dominio
+/// publico, CC0, y la ficha mas completa), <b>iTunes</b> y <b>Deezer</b>. Las dos ultimas no piden
+/// clave ni registro y conocen lo reciente y lo comercial, que es justo lo que a MusicBrainz se le
+/// escapa; con una sola fuente, media biblioteca se quedaba sin ficha.
 /// </remarks>
 public interface ISongLookupService
 {

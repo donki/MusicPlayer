@@ -56,6 +56,13 @@
         </ScrollView>
 
         <VerticalStackLayout Grid.Row="2" Padding="12" Spacing="8">
+            <!-- Ponerle caratula a mano: del aparato, de una direccion o buscandola. -->
+            <Button x:Name="ArtButton"
+                    Style="{StaticResource OutlineButton}"
+                    ImageSource="ic_artwork.png"
+                    ContentLayout="Left,8"
+                    Clicked="OnArtClicked" />
+
             <!-- Buscar la ficha en internet y rellenar los campos con lo que se encuentre. -->
             <Button x:Name="LookupButton"
                     Style="{StaticResource OutlineButton}"

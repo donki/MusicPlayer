@@ -19,6 +19,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISongLookupService, SongLookupService>();
         builder.Services.AddSingleton<IPlaylistService, PlaylistService>();
         builder.Services.AddSingleton<ISongTagsService, SongTagsService>();
+
+        // Imagenes puestas a mano por el usuario. Manda sobre la caratula del fichero y
+        // sobre lo que se descargue: es una decision suya.
+        builder.Services.AddSingleton<ICustomArtService>(_ =>
+            new CustomArtService(new HttpClient { Timeout = TimeSpan.FromSeconds(20) }));
         builder.Services.AddSingleton<UpdateService>();
 
 #if ANDROID

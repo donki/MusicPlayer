@@ -57,6 +57,20 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     /// <summary>Android Auto no pagina: una lista enorme tarda y se corta sola. Se acota aqui.</summary>
     private const int MaxBrowsableChildren = 500;
 
+    /// <summary>
+    /// Quien esta navegando la biblioteca (Android Auto, el Asistente…). Se guarda al abrirle la
+    /// puerta en <see cref="OnGetRoot"/> porque hace falta despues: las imagenes de los grupos son
+    /// ficheros privados de la aplicacion y hay que darle permiso de lectura sobre cada una.
+    /// </summary>
+    private string? _navegando;
+
+    /// <summary>Copias de las imagenes de grupo que se le pueden enseñar a otra aplicacion.</summary>
+    private const string AutoArtFolder = "auto-art";
+
+    /// <summary>Las dos acciones propias que Android Auto pinta como botones.</summary>
+    private const string ShuffleAction = "com.socratic.musicplayer.SHUFFLE";
+    private const string RepeatAction = "com.socratic.musicplayer.REPEAT";
+
     /// <summary>Volumen al que baja la musica cuando otra app pide foco temporal (un aviso del GPS).</summary>
     private const float DuckVolume = 0.2f;
 
@@ -223,6 +237,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             return null;
         }
 
+        _navegando = clientPackageName;
+
         // Pistas de presentacion: los grupos se ven mejor como rejilla de fotos y las canciones
         // como lista. Android Auto las respeta; quien no las entienda las ignora sin romperse.
         var extras = new Bundle();
@@ -287,7 +303,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             {
                 var subtitle = SongCountText(localization, artist.SongCount);
                 items.Add(Browsable(ArtistPrefix + artist.Name, artist.Name, subtitle,
-                    artist.ImagePath is null ? null : AndroidUri.FromFile(new Java.IO.File(artist.ImagePath))));
+                    ImagenParaElCoche(artist.ImagePath)));
             }
 
             return items;
@@ -320,6 +336,55 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         }
 
         return items;
+    }
+
+    /// <summary>
+    /// La imagen de un grupo, en una direccion que <b>otra aplicacion</b> pueda abrir.
+    /// </summary>
+    /// <remarks>
+    /// <para>Antes se pasaba un <c>file://</c> a la foto guardada. En el movil se veia —es la misma
+    /// aplicacion— y en el coche no: Android Auto corre en otro proceso y no puede leer un fichero
+    /// privado nuestro. Por eso las caratulas de las canciones si salian, porque esas son
+    /// <c>content://media/…</c> del sistema, que puede leer cualquiera.</para>
+    ///
+    /// <para>Ahora se sirve por el <c>FileProvider</c> de la aplicacion y se le da permiso de
+    /// lectura a quien esta navegando. El fichero se copia antes a la carpeta de <b>cache</b>
+    /// porque es la unica que el proveedor tiene declarada; la carpeta de datos, donde vive la
+    /// imagen original, no esta.</para>
+    /// </remarks>
+    private AndroidUri? ImagenParaElCoche(string? imagePath)
+    {
+        if (string.IsNullOrEmpty(imagePath) || !System.IO.File.Exists(imagePath))
+            return null;
+
+        try
+        {
+            var carpeta = System.IO.Path.Combine(FileSystem.CacheDirectory, AutoArtFolder);
+            System.IO.Directory.CreateDirectory(carpeta);
+
+            var copia = System.IO.Path.Combine(carpeta, System.IO.Path.GetFileName(imagePath));
+            if (!System.IO.File.Exists(copia) ||
+                System.IO.File.GetLastWriteTimeUtc(copia) < System.IO.File.GetLastWriteTimeUtc(imagePath))
+            {
+                System.IO.File.Copy(imagePath, copia, overwrite: true);
+            }
+
+            var uri = AndroidX.Core.Content.FileProvider.GetUriForFile(
+                this, $"{PackageName}.fileProvider", new Java.IO.File(copia));
+
+            if (_navegando is not null && uri is not null)
+            {
+                GrantUriPermission(_navegando, uri, ActivityFlags.GrantReadUriPermission);
+            }
+
+            return uri;
+        }
+        catch (Exception ex)
+        {
+            // Sin imagen se ve el marcador generico, que es mucho mejor que quedarse sin lista.
+            _logger?.LogWarning(ex, "No se pudo preparar la imagen de grupo para el coche.");
+            return null;
+        }
     }
 
     private List<MediaBrowserCompat.MediaItem> Playables(
@@ -972,10 +1037,40 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
                     PlaybackStateCompat.ActionPlayFromSearch |
                     PlaybackStateCompat.ActionSetShuffleMode |
                     PlaybackStateCompat.ActionSetRepeatMode)!
-                .SetState(stateCode, (long)Position.TotalMilliseconds, IsPlaying ? 1.0f : 0f)!
-                .Build();
+                .SetState(stateCode, (long)Position.TotalMilliseconds, IsPlaying ? 1.0f : 0f)!;
 
-            _session.SetPlaybackState(state);
+            // Aleatorio y repetir, como BOTONES.
+            //
+            // No basta con declarar ActionSetShuffleMode / ActionSetRepeatMode y llamar a
+            // SetShuffleMode / SetRepeatMode —que ya se hacia—: eso le dice al coche en que modo
+            // estamos, pero Android Auto no dibuja ningun control por ello. Los unicos botones que
+            // pinta ademas de los de siempre son las ACCIONES PROPIAS de la sesion, y por eso alli
+            // no habia forma de poner una lista en aleatorio ni de repetir una cancion.
+            //
+            // El estado se cuenta en el icono y en el rotulo, porque un boton que no dice como esta
+            // obliga a probarlo para averiguarlo.
+            var textos = ServiceHelper.GetService<ILocalizationService>();
+
+            state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
+                    ShuffleAction,
+                    textos?[Shuffle ? "AutoShuffleOn" : "AutoShuffleOff"] ?? (Shuffle ? "Shuffle: on" : "Shuffle: off"),
+                    Resource.Drawable.ic_auto_shuffle)
+                .Build());
+
+            var (repeatIcon, repeatKey) = Repeat switch
+            {
+                RepeatMode.One => (Resource.Drawable.ic_auto_repeat_one, "AutoRepeatOne"),
+                RepeatMode.All => (Resource.Drawable.ic_auto_repeat, "AutoRepeatAll"),
+                _ => (Resource.Drawable.ic_auto_repeat, "AutoRepeatOff"),
+            };
+
+            state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
+                    RepeatAction, textos?[repeatKey] ?? repeatKey, repeatIcon)
+                .Build());
+
+            var built = state.Build();
+
+            _session.SetPlaybackState(built);
             _session.SetShuffleMode(Shuffle
                 ? PlaybackStateCompat.ShuffleModeAll
                 : PlaybackStateCompat.ShuffleModeNone);
@@ -1171,6 +1266,30 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         public override void OnPlayFromSearch(string? query, Bundle? extras) =>
             _service.PlayFromSearch(query);
+
+        /// <summary>
+        /// Los botones propios del coche. El de repetir <b>gira</b>: no repetir, la lista, esta
+        /// cancion. Un boton no da para tres estados de otra manera, y es como funciona en
+        /// cualquier reproductor.
+        /// </summary>
+        public override void OnCustomAction(string? action, Bundle? extras)
+        {
+            switch (action)
+            {
+                case ShuffleAction:
+                    _service.SetShuffle(!_service.Shuffle);
+                    break;
+
+                case RepeatAction:
+                    _service.SetRepeat(_service.Repeat switch
+                    {
+                        RepeatMode.Off => RepeatMode.All,
+                        RepeatMode.All => RepeatMode.One,
+                        _ => RepeatMode.Off,
+                    });
+                    break;
+            }
+        }
 
         public override void OnSetShuffleMode(int shuffleMode) =>
             _service.SetShuffle(shuffleMode != PlaybackStateCompat.ShuffleModeNone);

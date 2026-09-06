@@ -45,20 +45,22 @@ public sealed class SongLookupService : ISongLookupService, IDisposable
         await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // En cascada, y en este orden: MusicBrainz primero porque sus datos son de dominio
+            // publico y su ficha es la mas completa (album, año y numero de pista). Cuando no
+            // conoce la cancion —le pasa con lo muy nuevo, lo muy local y lo que nunca se edito—
+            // se prueba en las tiendas, que de eso van sobradas. Antes solo se miraba en
+            // MusicBrainz, y media biblioteca se quedaba sin ficha.
             await WaitForRateLimitAsync(cancellationToken).ConfigureAwait(false);
 
-            var address = BuildQuery(tags);
-            using var response = await _http.GetAsync(address, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Song lookup returned {Status}.", (int)response.StatusCode);
-                return SongLookupResult.None;
-            }
+            var enMusicBrainz = await BuscarEnMusicBrainzAsync(tags, cancellationToken).ConfigureAwait(false);
+            if (enMusicBrainz.Found)
+                return enMusicBrainz;
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var enITunes = await BuscarEnITunesAsync(tags, cancellationToken).ConfigureAwait(false);
+            if (enITunes.Found)
+                return enITunes;
 
-            return ReadBest(document.RootElement);
+            return await BuscarEnDeezerAsync(tags, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -73,6 +75,118 @@ public sealed class SongLookupService : ISongLookupService, IDisposable
         finally
         {
             _requestGate.Release();
+        }
+    }
+
+    /// <summary>MusicBrainz: la enciclopedia. Datos CC0 y la ficha mas completa.</summary>
+    private async Task<SongLookupResult> BuscarEnMusicBrainzAsync(SongTags tags, CancellationToken cancellationToken)
+    {
+        using var document = await PedirAsync(BuildQuery(tags), cancellationToken).ConfigureAwait(false);
+        return document is null ? SongLookupResult.None : ReadBest(document.RootElement);
+    }
+
+    /// <summary>
+    /// iTunes: el catalogo de la tienda de Apple. Sin clave, sin registro y con casi todo lo
+    /// comercial, que es justo lo que a MusicBrainz se le escapa cuando es reciente.
+    /// </summary>
+    private async Task<SongLookupResult> BuscarEnITunesAsync(SongTags tags, CancellationToken cancellationToken)
+    {
+        var termino = Termino(tags);
+        if (termino.Length == 0)
+            return SongLookupResult.None;
+
+        var direccion = "https://itunes.apple.com/search?media=music&entity=song&limit=5&term="
+                        + Uri.EscapeDataString(termino);
+
+        using var document = await PedirAsync(direccion, cancellationToken).ConfigureAwait(false);
+        if (document is null || !document.RootElement.TryGetProperty("results", out var resultados))
+            return SongLookupResult.None;
+
+        foreach (var item in resultados.EnumerateArray())
+        {
+            var titulo = ReadString(item, "trackName");
+            if (titulo.Length == 0)
+                continue;
+
+            var año = 0;
+            if (item.TryGetProperty("releaseDate", out var fecha) &&
+                DateTime.TryParse(fecha.GetString(), CultureInfo.InvariantCulture,
+                    DateTimeStyles.AdjustToUniversal, out var salida))
+            {
+                año = salida.Year;
+            }
+
+            var pista = item.TryGetProperty("trackNumber", out var numero) && numero.TryGetInt32(out var n) ? n : 0;
+
+            return new SongLookupResult(
+                titulo,
+                ReadString(item, "artistName"),
+                ReadString(item, "collectionName"),
+                año,
+                pista);
+        }
+
+        return SongLookupResult.None;
+    }
+
+    /// <summary>
+    /// Deezer: el ultimo recurso. Tampoco pide clave y conoce cosas que las otras dos no; a cambio
+    /// no da ni el año ni el numero de pista, asi que solo se usa cuando lo demas no ha dado nada.
+    /// </summary>
+    private async Task<SongLookupResult> BuscarEnDeezerAsync(SongTags tags, CancellationToken cancellationToken)
+    {
+        var termino = Termino(tags);
+        if (termino.Length == 0)
+            return SongLookupResult.None;
+
+        var direccion = "https://api.deezer.com/search?limit=5&q=" + Uri.EscapeDataString(termino);
+
+        using var document = await PedirAsync(direccion, cancellationToken).ConfigureAwait(false);
+        if (document is null || !document.RootElement.TryGetProperty("data", out var datos))
+            return SongLookupResult.None;
+
+        foreach (var item in datos.EnumerateArray())
+        {
+            var titulo = ReadString(item, "title");
+            if (titulo.Length == 0)
+                continue;
+
+            var grupo = item.TryGetProperty("artist", out var artista) ? ReadString(artista, "name") : string.Empty;
+            var album = item.TryGetProperty("album", out var disco) ? ReadString(disco, "title") : string.Empty;
+
+            return new SongLookupResult(titulo, grupo, album, 0, 0);
+        }
+
+        return SongLookupResult.None;
+    }
+
+    /// <summary>Lo que se le pide a una tienda: el titulo y, si se sabe, el grupo.</summary>
+    private static string Termino(SongTags tags) =>
+        (tags.Title.Trim() + " " + FirstNonEmpty(tags.Artist, tags.AlbumArtist, tags.Composer)).Trim();
+
+    /// <summary>
+    /// Una peticion que devuelve JSON, o <c>null</c> si no hay respuesta buena. Que una fuente falle
+    /// no puede tumbar la busqueda: quedan las otras.
+    /// </summary>
+    private async Task<JsonDocument?> PedirAsync(string direccion, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(direccion, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Song lookup returned {Status} for {Address}.",
+                    (int)response.StatusCode, direccion);
+                return null;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        {
+            _logger.LogWarning(ex, "Song lookup failed for {Address}.", direccion);
+            return null;
         }
     }
 

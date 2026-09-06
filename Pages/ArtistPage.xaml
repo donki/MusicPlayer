@@ -25,7 +25,7 @@
                         </Grid>
                     </Border>
 
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4">
                         <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
                             <Label x:Name="ArtistNameLabel" FontSize="22" FontAttributes="Bold" />
                             <Label x:Name="ArtistCountLabel" Style="{StaticResource HintText}" />
@@ -38,8 +38,15 @@
                                      Source="ic_edit.png"
                                      Clicked="OnRenameGroupClicked" />
 
-                        <!-- Vuelve a buscar foto y resena, saltandose lo ya consultado. -->
+                        <!-- Poner la foto a mano: del aparato, de una direccion, o buscandola. -->
                         <ImageButton Grid.Column="2"
+                                     x:Name="ArtButton"
+                                     Style="{StaticResource RowIconButton}"
+                                     Source="ic_artwork.png"
+                                     Clicked="OnArtClicked" />
+
+                        <!-- Vuelve a buscar foto y resena, saltandose lo ya consultado. -->
+                        <ImageButton Grid.Column="3"
                                      x:Name="RefreshInfoButton"
                                      Style="{StaticResource RowIconButton}"
                                      Source="ic_refresh.png"

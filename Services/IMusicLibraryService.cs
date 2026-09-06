@@ -61,6 +61,16 @@ public interface IMusicLibraryService
     string? GetAlbumArtUri(Song song);
 
     /// <summary>
+    /// Ruta de la imagen que el usuario haya puesto a mano, o <c>null</c>. Hace falta aparte de
+    /// <see cref="GetAlbumArt"/> porque quien la enseña fuera de la aplicacion —el coche, la
+    /// notificacion— necesita el fichero, no un <c>ImageSource</c>.
+    /// </summary>
+    string? GetCustomArtPath(Song song);
+
+    /// <inheritdoc cref="GetCustomArtPath(Song)"/>
+    string? GetCustomArtPath(ArtistGroup artist);
+
+    /// <summary>
     /// Caratula lista para pintar. Devuelve <c>null</c> cuando el album no tiene, que es lo
     /// normal en buena parte de una biblioteca: la interfaz muestra entonces el marcador.
     /// </summary>

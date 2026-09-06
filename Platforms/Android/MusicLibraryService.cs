@@ -34,6 +34,7 @@ public sealed class MusicLibraryService : IMusicLibraryService
     private readonly ISettingsService _settings;
     private readonly IMediaAccessService _access;
     private readonly IArtistInfoService _artistInfo;
+    private readonly ICustomArtService _customArt;
     private readonly ISongTagsService _tags;
     private readonly ILogger<MusicLibraryService> _logger;
 
@@ -51,12 +52,14 @@ public sealed class MusicLibraryService : IMusicLibraryService
         ISettingsService settings,
         IMediaAccessService access,
         IArtistInfoService artistInfo,
+        ICustomArtService customArt,
         ISongTagsService tags,
         ILogger<MusicLibraryService> logger)
     {
         _settings = settings;
         _access = access;
         _artistInfo = artistInfo;
+        _customArt = customArt;
         _tags = tags;
         _logger = logger;
     }
@@ -105,6 +108,10 @@ public sealed class MusicLibraryService : IMusicLibraryService
     public string? GetAlbumArtUri(Song song) =>
         song.AlbumId > 0 ? $"content://media/external/audio/albumart/{song.AlbumId}" : null;
 
+    public string? GetCustomArtPath(Song song) => _customArt.ForSong(song.Id);
+
+    public string? GetCustomArtPath(ArtistGroup artist) => _customArt.ForArtist(artist.Name);
+
     /// <summary>
     /// Caratula del album. MAUI no sabe abrir una URI <c>content://</c>, asi que se le da un
     /// origen de flujo que la resuelve por el proveedor de contenidos. El resultado se cachea por
@@ -113,6 +120,10 @@ public sealed class MusicLibraryService : IMusicLibraryService
     /// </summary>
     public ImageSource? GetAlbumArt(Song song)
     {
+        // Puesta a mano: manda sobre la del album, que puede no decir nada en un recopilatorio.
+        if (_customArt.ForSong(song.Id) is { } propia)
+            return ImageSource.FromFile(propia);
+
         if (song.AlbumId <= 0)
             return null;
 
@@ -471,7 +482,9 @@ public sealed class MusicLibraryService : IMusicLibraryService
                     .ToList(),
                 // La foto solo se pinta si ya estaba descargada: la rejilla no dispara consultas
                 // de red al desplazarse.
-                ImagePath = _artistInfo.GetCachedImagePath(group.Key),
+                // La puesta a mano manda sobre la descargada: es una decision del usuario y no
+                // la puede pisar una busqueda posterior.
+                ImagePath = _customArt.ForArtist(group.Key) ?? _artistInfo.GetCachedImagePath(group.Key),
             })
             .OrderBy(artist => artist.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
