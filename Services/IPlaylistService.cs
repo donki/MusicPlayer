@@ -45,4 +45,13 @@ public interface IPlaylistService
     void RemoveSongEverywhere(long songId);
 
     void RemoveSongsEverywhere(IReadOnlyCollection<long> songIds);
+
+    /// <summary>Si la cancion esta en la lista de favoritas.</summary>
+    bool IsFavorite(long songId);
+
+    /// <summary>
+    /// Mete la cancion en favoritas si no estaba y la saca si estaba. Devuelve como queda: es lo
+    /// que necesita el boton para pintarse y el aviso para decir lo que ha pasado.
+    /// </summary>
+    bool ToggleFavorite(long songId);
 }

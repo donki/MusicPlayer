@@ -127,7 +127,7 @@
                         <DataTemplate x:DataType="models:PlaylistRow">
                             <Border Style="{StaticResource Card}" Margin="0,0,0,6">
                                 <Grid ColumnDefinitions="48,*,48" ColumnSpacing="8" Padding="8,6">
-                                    <Image Grid.Column="0" Source="ic_playlists.png" WidthRequest="26" HeightRequest="26" />
+                                    <Image Grid.Column="0" Source="{Binding Icon}" WidthRequest="26" HeightRequest="26" />
                                     <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
                                         <Label Text="{Binding Name}" Style="{StaticResource ItemTitle}" />
                                         <Label Text="{Binding Subtitle}" Style="{StaticResource ItemSubtitle}" />
@@ -135,6 +135,7 @@
                                     <ImageButton Grid.Column="2"
                                                  Style="{StaticResource RowIconButton}"
                                                  Source="ic_more.png"
+                                                 IsVisible="{Binding CanEdit}"
                                                  Clicked="OnPlaylistMenuClicked" />
                                     <Grid.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnPlaylistTapped" />

@@ -47,6 +47,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     public const string ArtistsId = "artists";
     public const string PlaylistsId = "playlists";
     public const string AllSongsId = "allsongs";
+    /// <summary>Favoritas en la raiz del coche: es una lista mas, pero merece estar a un toque.</summary>
+    public const string FavoritesId = "playlist|" + Playlist.FavoritesId;
     private const string ArtistPrefix = "artist|";
     private const string PlaylistPrefix = "playlist|";
     private const string SongPrefix = "song|";
@@ -58,18 +60,28 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     private const int MaxBrowsableChildren = 500;
 
     /// <summary>
-    /// Quien esta navegando la biblioteca (Android Auto, el Asistente…). Se guarda al abrirle la
-    /// puerta en <see cref="OnGetRoot"/> porque hace falta despues: las imagenes de los grupos son
-    /// ficheros privados de la aplicacion y hay que darle permiso de lectura sobre cada una.
+    /// Quienes han navegado la biblioteca (Android Auto, el Asistente, el Bluetooth del coche, la
+    /// interfaz del sistema…). Se apuntan al abrirles la puerta en <see cref="OnGetRoot"/> porque
+    /// hacen falta despues: las imagenes se sirven desde ficheros privados de la aplicacion y hay
+    /// que darle permiso de lectura sobre cada una a <b>todos</b>. Antes se guardaba solo el
+    /// ultimo, y como el Bluetooth y la interfaz del sistema se conectan despues que Auto, el
+    /// permiso se le acababa dando a quien no lo necesitaba y al coche no le llegaba ninguno.
     /// </summary>
-    private string? _navegando;
+    private readonly HashSet<string> _navegantes = [];
 
-    /// <summary>Copias de las imagenes de grupo que se le pueden enseñar a otra aplicacion.</summary>
+    /// <summary>Copias de las imagenes que se le pueden enseñar a otra aplicacion.</summary>
     private const string AutoArtFolder = "auto-art";
 
-    /// <summary>Las dos acciones propias que Android Auto pinta como botones.</summary>
+    /// <summary>Lado maximo de la caratula que se copia para el coche. La pantalla no pide mas.</summary>
+    private const int AutoArtSize = 512;
+
+    /// <summary>Albumes de los que ya se sabe que no tienen caratula, para no volver a abrirlos.</summary>
+    private readonly HashSet<long> _albumesSinCaratula = [];
+
+    /// <summary>Las acciones propias que Android Auto pinta como botones.</summary>
     private const string ShuffleAction = "com.socratic.musicplayer.SHUFFLE";
     private const string RepeatAction = "com.socratic.musicplayer.REPEAT";
+    private const string FavoriteAction = "com.socratic.musicplayer.FAVORITE";
 
     /// <summary>Volumen al que baja la musica cuando otra app pide foco temporal (un aviso del GPS).</summary>
     private const float DuckVolume = 0.2f;
@@ -180,6 +192,10 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             Repeat = (RepeatMode)settings.RepeatMode;
         }
 
+        // El corazon del coche y sus listas tienen que reflejar lo que se marque en el movil.
+        if (ServiceHelper.GetService<IPlaylistService>() is { } playlists)
+            playlists.PlaylistsChanged += OnPlaylistsChanged;
+
         PublishPlaybackState();
 
         if (PendingRequest is { } pending)
@@ -187,6 +203,13 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             PendingRequest = null;
             PlayQueue(pending.Queue, pending.Index, pending.AutoPlay);
         }
+    }
+
+    private void OnPlaylistsChanged(object? sender, EventArgs e)
+    {
+        PublishPlaybackState();
+        NotifyChildrenChanged(PlaylistsId);
+        NotifyChildrenChanged(FavoritesId);
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -212,6 +235,9 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
     public override void OnDestroy()
     {
+        if (ServiceHelper.GetService<IPlaylistService>() is { } playlists)
+            playlists.PlaylistsChanged -= OnPlaylistsChanged;
+
         AbandonAudioFocus();
         ReleasePlayer();
 
@@ -237,7 +263,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             return null;
         }
 
-        _navegando = clientPackageName;
+        lock (_navegantes)
+            _navegantes.Add(clientPackageName);
 
         // Pistas de presentacion: los grupos se ven mejor como rejilla de fotos y las canciones
         // como lista. Android Auto las respeta; quien no las entienda las ignora sin romperse.
@@ -254,29 +281,36 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         if (result is null)
             return;
 
-        var items = new List<MediaBrowserCompat.MediaItem>();
+        // Se contesta desde otro hilo: preparar las caratulas de una lista larga lleva su tiempo
+        // (hay que copiarlas la primera vez) y Android llama a esto desde el hilo principal.
+        result.Detach();
 
-        try
+        Task.Run(() =>
         {
-            var library = ServiceHelper.GetService<IMusicLibraryService>();
-            var playlists = ServiceHelper.GetService<IPlaylistService>();
-            var localization = ServiceHelper.GetService<ILocalizationService>();
+            var items = new List<MediaBrowserCompat.MediaItem>();
 
-            if (library is not null && !library.HasScanned)
+            try
             {
-                // Android Auto puede arrancar el proceso sin que la interfaz se haya abierto nunca:
-                // en ese caso la biblioteca todavia esta vacia y hay que leerla aqui.
-                library.ScanAsync().GetAwaiter().GetResult();
+                var library = ServiceHelper.GetService<IMusicLibraryService>();
+                var playlists = ServiceHelper.GetService<IPlaylistService>();
+                var localization = ServiceHelper.GetService<ILocalizationService>();
+
+                if (library is not null && !library.HasScanned)
+                {
+                    // Android Auto puede arrancar el proceso sin que la interfaz se haya abierto
+                    // nunca: en ese caso la biblioteca todavia esta vacia y hay que leerla aqui.
+                    library.ScanAsync().GetAwaiter().GetResult();
+                }
+
+                items = BuildChildren(parentId, library, playlists, localization);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "The browse node {ParentId} could not be built.", parentId);
             }
 
-            items = BuildChildren(parentId, library, playlists, localization);
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "The browse node {ParentId} could not be built.", parentId);
-        }
-
-        result.SendResult(new JavaList<MediaBrowserCompat.MediaItem>(items));
+            result.SendResult(new JavaList<MediaBrowserCompat.MediaItem>(items));
+        });
     }
 
     private List<MediaBrowserCompat.MediaItem> BuildChildren(
@@ -291,6 +325,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         if (parentId == RootId)
         {
+            items.Add(Browsable(FavoritesId, localization?["Favorites"] ?? "Favorites",
+                iconUri: IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on)));
             items.Add(Browsable(ArtistsId, localization?["TabArtists"] ?? "Artists"));
             items.Add(Browsable(PlaylistsId, localization?["TabPlaylists"] ?? "Playlists"));
             items.Add(Browsable(AllSongsId, localization?["TabSongs"] ?? "Songs"));
@@ -314,7 +350,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             foreach (var playlist in playlists?.Playlists ?? [])
             {
                 items.Add(Browsable(PlaylistPrefix + playlist.Id, playlist.Name,
-                    SongCountText(localization, playlist.SongIds.Count)));
+                    SongCountText(localization, playlist.SongIds.Count),
+                    playlist.IsFavorites ? IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on) : null));
             }
 
             return items;
@@ -359,25 +396,14 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         try
         {
-            var carpeta = System.IO.Path.Combine(FileSystem.CacheDirectory, AutoArtFolder);
-            System.IO.Directory.CreateDirectory(carpeta);
-
-            var copia = System.IO.Path.Combine(carpeta, System.IO.Path.GetFileName(imagePath));
+            var copia = System.IO.Path.Combine(CarpetaParaElCoche(), System.IO.Path.GetFileName(imagePath));
             if (!System.IO.File.Exists(copia) ||
                 System.IO.File.GetLastWriteTimeUtc(copia) < System.IO.File.GetLastWriteTimeUtc(imagePath))
             {
                 System.IO.File.Copy(imagePath, copia, overwrite: true);
             }
 
-            var uri = AndroidX.Core.Content.FileProvider.GetUriForFile(
-                this, $"{PackageName}.fileProvider", new Java.IO.File(copia));
-
-            if (_navegando is not null && uri is not null)
-            {
-                GrantUriPermission(_navegando, uri, ActivityFlags.GrantReadUriPermission);
-            }
-
-            return uri;
+            return UriCompartida(copia);
         }
         catch (Exception ex)
         {
@@ -387,6 +413,103 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         }
     }
 
+    /// <summary>
+    /// La caratula de una cancion, en una direccion que el coche pueda abrir.
+    /// </summary>
+    /// <remarks>
+    /// <para>Se daba por hecho que la caratula del indice de medios
+    /// (<c>content://media/external/audio/albumart/…</c>) la podia leer cualquiera, y no: desde
+    /// Android 13 el proveedor de medios exige al que la abre el permiso de leer audio, y Android
+    /// Auto no lo tiene. Nosotros si, asi que la abrimos aqui, la reducimos y la guardamos en la
+    /// cache; de ahi se sirve como las imagenes de grupo, por el proveedor propio y con permiso
+    /// dado a quien navega.</para>
+    ///
+    /// <para>La imagen puesta a mano manda sobre la del album, igual que en el movil.</para>
+    /// </remarks>
+    private AndroidUri? CaratulaParaElCoche(Song song, IMusicLibraryService library)
+    {
+        if (library.GetCustomArtPath(song) is { } propia)
+            return ImagenParaElCoche(propia);
+
+        if (song.AlbumId <= 0)
+            return null;
+
+        lock (_albumesSinCaratula)
+        {
+            if (_albumesSinCaratula.Contains(song.AlbumId))
+                return null;
+        }
+
+        try
+        {
+            var copia = System.IO.Path.Combine(CarpetaParaElCoche(), $"album-{song.AlbumId}.jpg");
+            if (!System.IO.File.Exists(copia))
+            {
+                using var bitmap = LoadAlbumArt(song);
+                if (bitmap is null)
+                {
+                    lock (_albumesSinCaratula)
+                        _albumesSinCaratula.Add(song.AlbumId);
+                    return null;
+                }
+
+                var scale = Math.Min(1f, (float)AutoArtSize / Math.Max(bitmap.Width, bitmap.Height));
+                using var scaled = scale < 1f
+                    ? Bitmap.CreateScaledBitmap(bitmap, (int)(bitmap.Width * scale), (int)(bitmap.Height * scale), true)
+                    : null;
+
+                using var stream = System.IO.File.Create(copia);
+                (scaled ?? bitmap).Compress(Bitmap.CompressFormat.Jpeg!, 85, stream);
+            }
+
+            return UriCompartida(copia);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "No se pudo preparar la caratula del album {AlbumId} para el coche.", song.AlbumId);
+            return null;
+        }
+    }
+
+    private static string CarpetaParaElCoche()
+    {
+        var carpeta = System.IO.Path.Combine(FileSystem.CacheDirectory, AutoArtFolder);
+        System.IO.Directory.CreateDirectory(carpeta);
+        return carpeta;
+    }
+
+    /// <summary>Direccion del proveedor propio para un fichero de la cache, con permiso de lectura
+    /// para todos los que han navegado la biblioteca.</summary>
+    private AndroidUri? UriCompartida(string path)
+    {
+        var uri = AndroidX.Core.Content.FileProvider.GetUriForFile(
+            this, $"{PackageName}.fileProvider", new Java.IO.File(path));
+        if (uri is null)
+            return null;
+
+        string[] navegantes;
+        lock (_navegantes)
+            navegantes = [.. _navegantes];
+
+        foreach (var paquete in navegantes)
+        {
+            try
+            {
+                GrantUriPermission(paquete, uri, ActivityFlags.GrantReadUriPermission);
+            }
+            catch (Java.Lang.SecurityException)
+            {
+                // Un paquete que ya no esta o al que no se le puede dar permiso: se sigue con el resto.
+            }
+        }
+
+        return uri;
+    }
+
+    /// <summary>Un icono de la propia aplicacion como direccion que el coche entiende.</summary>
+    private AndroidUri? IconoDeRecurso(int drawable) =>
+        AndroidUri.Parse($"android.resource://{PackageName}/{drawable}");
+
     private List<MediaBrowserCompat.MediaItem> Playables(
         IEnumerable<Song> songs, string contextId, IMusicLibraryService library)
     {
@@ -394,14 +517,14 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         foreach (var song in songs.Take(MaxBrowsableChildren))
         {
-            var art = library.GetAlbumArtUri(song);
+            var art = CaratulaParaElCoche(song, library);
             var builder = new MediaDescriptionCompat.Builder()
                 .SetMediaId($"{SongPrefix}{song.Id}|{contextId}")!
                 .SetTitle(song.Title)!
                 .SetSubtitle(song.ResolveGroupName(preferComposer: false))!;
 
             if (art is not null)
-                builder.SetIconUri(AndroidUri.Parse(art));
+                builder.SetIconUri(art);
 
             items.Add(new MediaBrowserCompat.MediaItem(builder.Build()!, MediaBrowserCompat.MediaItem.FlagPlayable));
         }
@@ -1006,11 +1129,21 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             .PutString(MediaMetadataCompat.MetadataKeyAlbum, song.Album)!
             .PutLong(MediaMetadataCompat.MetadataKeyDuration, (long)song.Duration.TotalMilliseconds)!;
 
-        var art = ServiceHelper.GetService<IMusicLibraryService>()?.GetAlbumArtUri(song);
-        if (art is not null)
+        if (ServiceHelper.GetService<IMusicLibraryService>() is { } library)
         {
-            builder.PutString(MediaMetadataCompat.MetadataKeyAlbumArtUri, art);
-            builder.PutString(MediaMetadataCompat.MetadataKeyDisplayIconUri, art);
+            // La direccion, para quien sepa abrirla, y el mapa de bits, para quien no: el coche
+            // lee el que le venga mejor. La sesion reduce el mapa de bits sola antes de enviarlo.
+            if (CaratulaParaElCoche(song, library) is { } art)
+            {
+                builder.PutString(MediaMetadataCompat.MetadataKeyAlbumArtUri, art.ToString());
+                builder.PutString(MediaMetadataCompat.MetadataKeyDisplayIconUri, art.ToString());
+            }
+
+            if (LoadAlbumArt(song) is { } bitmap)
+            {
+                builder.PutBitmap(MediaMetadataCompat.MetadataKeyAlbumArt, bitmap);
+                builder.PutBitmap(MediaMetadataCompat.MetadataKeyDisplayIcon, bitmap);
+            }
         }
 
         _session.SetMetadata(builder.Build());
@@ -1048,24 +1181,36 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             // no habia forma de poner una lista en aleatorio ni de repetir una cancion.
             //
             // El estado se cuenta en el icono y en el rotulo, porque un boton que no dice como esta
-            // obliga a probarlo para averiguarlo.
+            // obliga a probarlo para averiguarlo. El icono de "activado" es de color y lleva un
+            // punto debajo: el color por si el coche lo respeta, el punto por si lo tiñe de blanco
+            // como hace con los demas. De una forma u otra se distingue de un vistazo.
             var textos = ServiceHelper.GetService<ILocalizationService>();
 
             state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
                     ShuffleAction,
                     textos?[Shuffle ? "AutoShuffleOn" : "AutoShuffleOff"] ?? (Shuffle ? "Shuffle: on" : "Shuffle: off"),
-                    Resource.Drawable.ic_auto_shuffle)
+                    Shuffle ? Resource.Drawable.ic_auto_shuffle_on : Resource.Drawable.ic_auto_shuffle)
                 .Build());
 
             var (repeatIcon, repeatKey) = Repeat switch
             {
-                RepeatMode.One => (Resource.Drawable.ic_auto_repeat_one, "AutoRepeatOne"),
-                RepeatMode.All => (Resource.Drawable.ic_auto_repeat, "AutoRepeatAll"),
+                RepeatMode.One => (Resource.Drawable.ic_auto_repeat_one_on, "AutoRepeatOne"),
+                RepeatMode.All => (Resource.Drawable.ic_auto_repeat_on, "AutoRepeatAll"),
                 _ => (Resource.Drawable.ic_auto_repeat, "AutoRepeatOff"),
             };
 
             state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
                     RepeatAction, textos?[repeatKey] ?? repeatKey, repeatIcon)
+                .Build());
+
+            // Favorita: corazon lleno si la cancion esta en la lista, vacio si no.
+            var esFavorita = Current is { } sonando &&
+                (ServiceHelper.GetService<IPlaylistService>()?.IsFavorite(sonando.Id) ?? false);
+
+            state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
+                    FavoriteAction,
+                    textos?[esFavorita ? "AutoFavoriteOn" : "AutoFavoriteOff"] ?? (esFavorita ? "Favorite" : "Add to favorites"),
+                    esFavorita ? Resource.Drawable.ic_auto_favorite_on : Resource.Drawable.ic_auto_favorite)
                 .Build());
 
             var built = state.Build();
@@ -1159,7 +1304,15 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
     private Bitmap? LoadAlbumArt(Song song)
     {
-        var art = ServiceHelper.GetService<IMusicLibraryService>()?.GetAlbumArtUri(song);
+        var library = ServiceHelper.GetService<IMusicLibraryService>();
+        if (library is null)
+            return null;
+
+        // La imagen puesta a mano manda, como en el movil.
+        if (library.GetCustomArtPath(song) is { } propia && System.IO.File.Exists(propia))
+            return BitmapFactory.DecodeFile(propia);
+
+        var art = library.GetAlbumArtUri(song);
         if (art is null || ContentResolver is null)
             return null;
 
@@ -1287,6 +1440,12 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
                         RepeatMode.All => RepeatMode.One,
                         _ => RepeatMode.Off,
                     });
+                    break;
+
+                case FavoriteAction:
+                    // El cambio de lista dispara PlaylistsChanged y con el se repinta el corazon.
+                    if (_service.Current is { } song)
+                        ServiceHelper.GetService<IPlaylistService>()?.ToggleFavorite(song.Id);
                     break;
             }
         }

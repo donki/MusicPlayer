@@ -21,6 +21,7 @@ internal static class SongMenu
         var playlists = ServiceHelper.GetRequiredService<IPlaylistService>();
 
         var playText = localization["ActionPlay"];
+        var favoriteText = localization[playlists.IsFavorite(song.Id) ? "ActionRemoveFavorite" : "ActionAddFavorite"];
         var addText = localization["ActionAddToPlaylist"];
         var artistText = localization["ActionGoToArtist"];
         var infoText = localization["ActionSongInfo"];
@@ -29,8 +30,8 @@ internal static class SongMenu
         var deleteText = localization["ActionDelete"];
 
         string[] options = removeFromPlaylistId is null
-            ? [playText, addText, artistText, infoText, editText, deleteText]
-            : [playText, addText, artistText, infoText, editText, removeText, deleteText];
+            ? [playText, favoriteText, addText, artistText, infoText, editText, deleteText]
+            : [playText, favoriteText, addText, artistText, infoText, editText, removeText, deleteText];
 
         var choice = await SocShared.ModernDialog.ActionSheetAsync(page,
             localization["SongActionsTitle"], localization["Cancel"], options);
@@ -41,6 +42,12 @@ internal static class SongMenu
         if (choice == playText)
         {
             play();
+        }
+        else if (choice == favoriteText)
+        {
+            var isFavorite = playlists.ToggleFavorite(song.Id);
+            ServiceHelper.GetRequiredService<IToastService>()
+                .Show(localization[isFavorite ? "FavoriteAdded" : "FavoriteRemoved"]);
         }
         else if (choice == addText)
         {

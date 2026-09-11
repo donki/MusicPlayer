@@ -56,7 +56,7 @@
             </Grid>
 
             <!-- Modos y acciones sobre la cancion -->
-            <Grid Grid.Row="4" ColumnDefinitions="*,*,*,*,*">
+            <Grid Grid.Row="4" ColumnDefinitions="*,*,*,*,*,*">
                 <ImageButton Grid.Column="0"
                              x:Name="ShuffleButton"
                              Style="{StaticResource RowIconButton}"
@@ -67,16 +67,22 @@
                              Style="{StaticResource RowIconButton}"
                              Source="ic_repeat.png"
                              Clicked="OnRepeatClicked" />
+                <!-- Corazon: mete o saca la cancion de la lista de favoritas. -->
                 <ImageButton Grid.Column="2"
+                             x:Name="FavoriteButton"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_favorite.png"
+                             Clicked="OnFavoriteClicked" />
+                <ImageButton Grid.Column="3"
                              Style="{StaticResource RowIconButton}"
                              Source="ic_playlist_add.png"
                              Clicked="OnAddToPlaylistClicked" />
                 <!-- Ficha de la cancion: datos, grupo y letra (que sigue a la musica). -->
-                <ImageButton Grid.Column="3"
+                <ImageButton Grid.Column="4"
                              Style="{StaticResource RowIconButton}"
                              Source="ic_info.png"
                              Clicked="OnInfoClicked" />
-                <ImageButton Grid.Column="4"
+                <ImageButton Grid.Column="5"
                              Style="{StaticResource RowIconButton}"
                              Source="ic_delete.png"
                              Clicked="OnDeleteClicked" />

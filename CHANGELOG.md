@@ -2,6 +2,25 @@
 
 Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11).
 
+## 2026.09.11.1
+
+- **Favoritas**: corazón en *Reproduciendo* y opción en el menú de cualquier canción. Las
+  favoritas son una lista más —siempre existe, va la primera y no se renombra ni se borra—, así que
+  se reproduce y se navega como cualquier otra, en el móvil, en la tablet y en Android Auto, donde
+  además está en la raíz y tiene su propio botón (corazón lleno o vacío según la canción).
+- **Android Auto: los botones de aleatorio y repetir dicen cómo están.** El icono de «activado» va
+  de color y con un punto debajo; el de «apagado», en blanco. Antes los dos se veían iguales.
+- **Corregido: las carátulas no salían en el coche.** Dos causas. Desde Android 13 el proveedor de
+  medios no deja que Android Auto lea las carátulas del sistema, así que ahora se copian reducidas a
+  la caché y se sirven por el proveedor de la aplicación, como ya se hacía con las fotos de grupo.
+  Y el permiso de lectura sobre esas copias se daba solo al último que había abierto la biblioteca
+  —normalmente el Bluetooth o la interfaz del sistema, que se conectan después que Auto—; ahora se
+  da a todos. La pantalla de reproducción recibe además la carátula como imagen, sin depender de
+  direcciones.
+- La imagen puesta a mano a una canción sale también en la notificación y en el coche.
+- La lista de Android Auto se construye fuera del hilo principal: preparar 500 carátulas la primera
+  vez ya no congela la aplicación.
+
 ## 2026.08.29.1
 
 - **Ficha de la canción con letra**: nueva pantalla con los datos de la pista, la reseña del grupo y

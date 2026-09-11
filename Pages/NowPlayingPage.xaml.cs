@@ -54,6 +54,8 @@ public partial class NowPlayingPage : ContentPage
 
         ApplyTexts();
         _playback.StateChanged += OnPlaybackStateChanged;
+        // El corazon tambien cambia desde el coche o desde el menu de una lista.
+        _playlists.PlaylistsChanged += OnPlaylistsChanged;
 
         _timer ??= Dispatcher.CreateTimer();
         _timer.Interval = RefreshInterval;
@@ -67,6 +69,7 @@ public partial class NowPlayingPage : ContentPage
     protected override void OnDisappearing()
     {
         _playback.StateChanged -= OnPlaybackStateChanged;
+        _playlists.PlaylistsChanged -= OnPlaylistsChanged;
         _timer?.Stop();
         base.OnDisappearing();
     }
@@ -82,6 +85,9 @@ public partial class NowPlayingPage : ContentPage
     private void OnTick(object? sender, EventArgs e) => RefreshProgress();
 
     private void OnPlaybackStateChanged(object? sender, EventArgs e) => Refresh();
+
+    private void OnPlaylistsChanged(object? sender, EventArgs e) =>
+        MainThread.BeginInvokeOnMainThread(Refresh);
 
     private void Refresh()
     {
@@ -123,6 +129,8 @@ public partial class NowPlayingPage : ContentPage
 
         RepeatButton.Source = _playback.Repeat == RepeatMode.One ? "ic_repeat_one.png" : "ic_repeat.png";
         RepeatButton.Opacity = _playback.Repeat == RepeatMode.Off ? 0.4 : 1;
+
+        FavoriteButton.Source = _playlists.IsFavorite(song.Id) ? "ic_favorite_filled.png" : "ic_favorite.png";
 
         var index = _playback.QueueIndex;
         var total = _playback.Queue.Count;
@@ -193,6 +201,15 @@ public partial class NowPlayingPage : ContentPage
         }]);
 
         Refresh();
+    }
+
+    private void OnFavoriteClicked(object? sender, EventArgs e)
+    {
+        if (_playback.Current is not { } song)
+            return;
+
+        var isFavorite = _playlists.ToggleFavorite(song.Id);
+        _toast.Show(_localization[isFavorite ? "FavoriteAdded" : "FavoriteRemoved"]);
     }
 
     /// <summary>

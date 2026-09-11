@@ -58,6 +58,12 @@ public sealed class PlaylistRow
     public required string Name { get; init; }
 
     public required string Subtitle { get; init; }
+
+    /// <summary>Favoritas lleva corazon; las demas, el icono de lista.</summary>
+    public required string Icon { get; init; }
+
+    /// <summary>Favoritas no tiene menu: no se renombra ni se borra.</summary>
+    public required bool CanEdit { get; init; }
 }
 
 /// <summary>Fila del selector de listas: una lista y si la cancion pertenece a ella.</summary>

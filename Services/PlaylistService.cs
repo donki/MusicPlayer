@@ -17,13 +17,15 @@ public sealed class PlaylistService : IPlaylistService
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     private readonly ILogger<PlaylistService> _logger;
+    private readonly ILocalizationService _localization;
     private readonly string _filePath;
     private readonly Lock _gate = new();
     private List<Playlist> _playlists = new();
 
-    public PlaylistService(ILogger<PlaylistService> logger)
+    public PlaylistService(ILogger<PlaylistService> logger, ILocalizationService localization)
     {
         _logger = logger;
+        _localization = localization;
         _filePath = Path.Combine(FileSystem.AppDataDirectory, FileName);
         Load();
     }
@@ -35,7 +37,12 @@ public sealed class PlaylistService : IPlaylistService
         get
         {
             lock (_gate)
+            {
+                // El nombre de favoritas no es del usuario: se pone en su idioma cada vez que se
+                // lee, y asi cambia con el resto de la aplicacion al cambiar de idioma.
+                _playlists[0].Name = _localization["Favorites"];
                 return _playlists.ToList();
+            }
         }
     }
 
@@ -69,7 +76,7 @@ public sealed class PlaylistService : IPlaylistService
         lock (_gate)
         {
             var playlist = _playlists.FirstOrDefault(item => item.Id == playlistId);
-            if (playlist is null)
+            if (playlist is null || playlist.IsFavorites)
                 return false;
 
             if (_playlists.Any(item => item.Id != playlistId &&
@@ -86,6 +93,9 @@ public sealed class PlaylistService : IPlaylistService
 
     public void Delete(string playlistId)
     {
+        if (playlistId == Playlist.FavoritesId)
+            return;
+
         lock (_gate)
         {
             if (_playlists.RemoveAll(playlist => playlist.Id == playlistId) == 0)
@@ -99,7 +109,32 @@ public sealed class PlaylistService : IPlaylistService
     public Playlist? Find(string playlistId)
     {
         lock (_gate)
+        {
+            _playlists[0].Name = _localization["Favorites"];
             return _playlists.FirstOrDefault(playlist => playlist.Id == playlistId);
+        }
+    }
+
+    public bool IsFavorite(long songId)
+    {
+        lock (_gate)
+            return _playlists[0].SongIds.Contains(songId);
+    }
+
+    public bool ToggleFavorite(long songId)
+    {
+        bool isFavorite;
+        lock (_gate)
+        {
+            var favorites = _playlists[0].SongIds;
+            isFavorite = !favorites.Remove(songId);
+            if (isFavorite)
+                favorites.Add(songId);
+            Save();
+        }
+
+        RaiseChanged();
+        return isFavorite;
     }
 
     public IReadOnlyList<string> PlaylistIdsContaining(long songId)
@@ -221,6 +256,24 @@ public sealed class PlaylistService : IPlaylistService
             _logger.LogError(ex, "The playlist file could not be read; starting with an empty list.");
             _playlists = new List<Playlist>();
         }
+        finally
+        {
+            EnsureFavoritesFirst();
+        }
+    }
+
+    /// <summary>
+    /// Favoritas existe siempre y va en la posicion 0: el resto del servicio cuenta con ello para
+    /// no tener que buscarla. Si el fichero viene de una version sin favoritas, se crea vacia.
+    /// </summary>
+    private void EnsureFavoritesFirst()
+    {
+        var index = _playlists.FindIndex(playlist => playlist.IsFavorites);
+        var favorites = index >= 0 ? _playlists[index] : new Playlist { Id = Playlist.FavoritesId, Name = "Favorites" };
+
+        if (index >= 0)
+            _playlists.RemoveAt(index);
+        _playlists.Insert(0, favorites);
     }
 
     private void Save()

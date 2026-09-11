@@ -304,6 +304,8 @@ public partial class LibraryPage : ContentPage
                 Id = playlist.Id,
                 Name = playlist.Name,
                 Subtitle = SongCountText(playlist.SongIds.Count),
+                Icon = playlist.IsFavorites ? "ic_favorite_filled.png" : "ic_playlists.png",
+                CanEdit = !playlist.IsFavorites,
             });
         }
 
