@@ -22,7 +22,16 @@ Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11)
   —normalmente el Bluetooth o la interfaz del sistema, que se conectan después que Auto—; ahora se
   da a todos. La pantalla de reproducción recibe además la carátula como imagen, sin depender de
   direcciones.
-- La imagen puesta a mano a una canción sale también en la notificación y en el coche.
+- **Configuración › Biblioteca, tres trabajos nuevos**: *Buscar en todo el móvil* (pide al
+  sistema que reindexe la memoria interna y las tarjetas y añade lo que aparezca), *Buscar
+  carátulas* (saca la imagen que lleva dentro cada fichero sin carátula, o el cover.jpg de su
+  carpeta) y *Releer etiquetas* (rellena título, grupo, álbum, compositor, año y pista desde el
+  fichero cuando el índice los dejó vacíos; lo corregido a mano se respeta). Y un interruptor
+  **Incluir todo el audio** para ver también grabaciones, podcasts y audiolibros.
+- Los iconos de aleatorio y repetir del coche llevan ahora trazos redondeados, como los de la
+  aplicación.
+- La imagen puesta a mano a una canción sale también en la notificación y en el coche, y sin
+  carátula ni imagen propia el coche enseña la foto del grupo, como el móvil.
 - La lista de Android Auto se construye fuera del hilo principal: preparar 500 carátulas la primera
   vez ya no congela la aplicación.
 

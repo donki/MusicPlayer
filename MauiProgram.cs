@@ -32,6 +32,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMusicLibraryService, Platforms.Android.MusicLibraryService>();
         builder.Services.AddSingleton<IPlaybackService, Platforms.Android.PlaybackService>();
         builder.Services.AddSingleton<ILyricsService, Platforms.Android.LyricsService>();
+        builder.Services.AddSingleton<ILibraryMaintenanceService, Platforms.Android.LibraryMaintenanceService>();
 #endif
 
         // Paginas: se resuelven por el contenedor cuando la navegacion lo permite y, si no, por su

@@ -1,16 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Repetir esta cancion.
-    ACTIVADO: el glifo recortado sobre un disco lleno. Es la unica forma de que se distinga del
-    apagado: Android Auto tiñe TODOS los iconos de las acciones propias de blanco (comprobado en el
-    Desktop Head Unit el 2026-09-11), asi que un color no sirve y un punto debajo apenas se ve.
-    Va todo en UN path con fillType="evenOdd": el disco y el glifo, y lo que queda cubierto dos
-    veces —el glifo— se queda hueco.
+    Repetir esta cancion. ACTIVADO: dentro de un anillo, que es lo que lo distingue del apagado.
+    Trazos redondeados, los mismos que los iconos de la aplicacion (stroke con extremos redondos),
+    en vez de las siluetas cuadradas de Material. Silueta blanca: el coche la tiñe.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
         android:width="24dp" android:height="24dp"
         android:viewportWidth="24" android:viewportHeight="24"
         android:tint="#FFFFFF">
-    <path android:fillColor="#FFFFFF" android:fillType="evenOdd"
-          android:pathData="M12,12m-12,0a12,12 0 1,1 24,0a12,12 0 1,1 -24,0 M7,7h10v3l4,-4l-4,-4v3H5v6h2V7z M17,17H7v-3l-4,4l4,4v-3h12v-6h-2V17z M11.2,15.5V10.4h-0.1l-1.6,0.9v-1.2l1.8,-1h1.2v6.4H11.2z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M12,12m-10.6,0a10.6,10.6 0 1,1 21.2,0a10.6,10.6 0 1,1 -21.2,0" />
+    <group android:scaleX="0.62" android:scaleY="0.62" android:pivotX="12" android:pivotY="12">
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M17,2l4,4l-4,4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M3,12V10a4,4 0 0 1 4,-4h14" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M7,22l-4,-4l4,-4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M21,12v2a4,4 0 0 1 -4,4H3" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M10.6,10.4l1.6,-1v5.2" />
+    </group>
 </vector>

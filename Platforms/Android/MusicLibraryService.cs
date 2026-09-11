@@ -29,6 +29,15 @@ public sealed class MusicLibraryService : IMusicLibraryService
     /// <summary>Solo pistas marcadas como musica: deja fuera tonos, notificaciones y grabaciones.</summary>
     private const string MusicOnlySelection = "is_music != 0";
 
+    /// <summary>
+    /// Todo el audio que no sea un tono: grabaciones, podcasts, audiolibros… de 30 segundos o mas,
+    /// para dejar fuera los sonidos de notificacion que algunas apps guardan como audio.
+    /// </summary>
+    private const string AllAudioSelection =
+        "is_ringtone = 0 AND is_notification = 0 AND is_alarm = 0 AND duration >= 30000";
+
+    private string Selection => _settings.IncludeAllAudio ? AllAudioSelection : MusicOnlySelection;
+
     private const string TitleSortOrder = "title COLLATE NOCASE ASC";
 
     private readonly ISettingsService _settings;
@@ -434,7 +443,7 @@ public sealed class MusicLibraryService : IMusicLibraryService
             try
             {
                 string[] extended = [.. BaseProjection, "album_artist"];
-                return resolver.Query(collection, extended, MusicOnlySelection, null, TitleSortOrder);
+                return resolver.Query(collection, extended, Selection, null, TitleSortOrder);
             }
             catch (Java.Lang.IllegalArgumentException ex)
             {
@@ -442,7 +451,7 @@ public sealed class MusicLibraryService : IMusicLibraryService
             }
         }
 
-        return resolver.Query(collection, BaseProjection, MusicOnlySelection, null, TitleSortOrder);
+        return resolver.Query(collection, BaseProjection, Selection, null, TitleSortOrder);
     }
 
     private static string ReadText(ICursor cursor, int column)

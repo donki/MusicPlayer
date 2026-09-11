@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Repetir solo la cancion actual: el mismo bucle con un «1» dentro. -->
+<!--
+    Repetir esta cancion.
+    Trazos redondeados, los mismos que los iconos de la aplicacion (stroke con extremos redondos),
+    en vez de las siluetas cuadradas de Material. Silueta blanca: el coche la tiñe.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
         android:width="24dp" android:height="24dp"
         android:viewportWidth="24" android:viewportHeight="24"
         android:tint="#FFFFFF">
-    <path android:fillColor="#FFFFFF"
-          android:pathData="M7,7h10v3l4,-4l-4,-4v3H5v6h2V7z" />
-    <path android:fillColor="#FFFFFF"
-          android:pathData="M17,17H7v-3l-4,4l4,4v-3h12v-6h-2V17z" />
-    <path android:fillColor="#FFFFFF"
-          android:pathData="M11.2,15.5V10.4h-0.1l-1.6,0.9v-1.2l1.8,-1h1.2v6.4H11.2z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M17,2l4,4l-4,4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M3,12V10a4,4 0 0 1 4,-4h14" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M7,22l-4,-4l4,-4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M21,12v2a4,4 0 0 1 -4,4H3" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M10.6,10.4l1.6,-1v5.2" />
 </vector>

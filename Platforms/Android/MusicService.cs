@@ -465,7 +465,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             var copia = System.IO.Path.Combine(CarpetaParaElCoche(), $"album-{song.AlbumId}.jpg");
             if (!System.IO.File.Exists(copia))
             {
-                using var bitmap = LoadAlbumArt(song);
+                using var bitmap = LoadAlbumArt(song, fallbackToArtist: false);
                 if (bitmap is null)
                 {
                     lock (_albumesSinCaratula)
@@ -1188,7 +1188,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         {
             // La direccion, para quien sepa abrirla, y el mapa de bits, para quien no: el coche
             // lee el que le venga mejor. La sesion reduce el mapa de bits sola antes de enviarlo.
-            if (CaratulaParaElCoche(song, library) is { } art)
+            // Como en el movil: sin caratula propia, la foto del grupo.
+            if ((CaratulaParaElCoche(song, library) ?? ImagenDelGrupo(song, library)) is { } art)
             {
                 builder.PutString(MediaMetadataCompat.MetadataKeyAlbumArtUri, art.ToString());
                 builder.PutString(MediaMetadataCompat.MetadataKeyDisplayIconUri, art.ToString());
@@ -1360,7 +1361,20 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         return id != 0 ? id : global::Android.Resource.Drawable.IcMediaPlay;
     }
 
-    private Bitmap? LoadAlbumArt(Song song)
+    /// <summary>La foto del grupo como mapa de bits, para la notificacion y el coche.</summary>
+    private static Bitmap? FotoDelGrupo(Song song, IMusicLibraryService library)
+    {
+        var name = song.ResolveGroupName(preferComposer: false);
+        var path = name.Length > 0 ? library.FindArtist(name)?.ImagePath : null;
+        return path is not null && System.IO.File.Exists(path) ? BitmapFactory.DecodeFile(path) : null;
+    }
+
+    /// <param name="fallbackToArtist">
+    /// Sin caratula, la foto del grupo. Se apaga al preparar la copia por album para el coche:
+    /// esa copia se comparte entre todas las canciones del album y en un recopilatorio la foto de
+    /// un grupo no vale para las demas.
+    /// </param>
+    private Bitmap? LoadAlbumArt(Song song, bool fallbackToArtist = true)
     {
         var library = ServiceHelper.GetService<IMusicLibraryService>();
         if (library is null)
@@ -1372,17 +1386,20 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         var art = library.GetAlbumArtUri(song);
         if (art is null || ContentResolver is null)
-            return null;
+            return fallbackToArtist ? FotoDelGrupo(song, library) : null;
 
         try
         {
             using var stream = ContentResolver.OpenInputStream(AndroidUri.Parse(art)!);
-            return stream is null ? null : BitmapFactory.DecodeStream(stream);
+            if (stream is not null)
+                return BitmapFactory.DecodeStream(stream);
+
+            return fallbackToArtist ? FotoDelGrupo(song, library) : null;
         }
         catch (Exception ex) when (ex is Java.IO.FileNotFoundException or Java.Lang.SecurityException or Java.IO.IOException)
         {
             // Muchos albumes no tienen caratula: es lo normal, no un error.
-            return null;
+            return fallbackToArtist ? FotoDelGrupo(song, library) : null;
         }
     }
 

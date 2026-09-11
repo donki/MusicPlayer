@@ -20,6 +20,39 @@
 
                     <BoxView Style="{StaticResource Separator}" />
 
+                    <!-- Los tres trabajos largos: indexar el telefono, sacar caratulas, releer
+                         etiquetas. Avisan de como van en la etiqueta de progreso. -->
+                    <Button x:Name="DeepScanButton"
+                            Style="{StaticResource OutlineButton}"
+                            ImageSource="ic_search.png"
+                            ContentLayout="Left,8"
+                            Clicked="OnDeepScanClicked" />
+                    <Label x:Name="DeepScanHint" Style="{StaticResource HintText}" />
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0" x:Name="IncludeAllAudioLabel" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                        <Switch Grid.Column="1" x:Name="IncludeAllAudioSwitch" Toggled="OnIncludeAllAudioToggled" VerticalOptions="Center" />
+                    </Grid>
+                    <Label x:Name="IncludeAllAudioHint" Style="{StaticResource HintText}" />
+
+                    <Button x:Name="ScanArtButton"
+                            Style="{StaticResource OutlineButton}"
+                            ImageSource="ic_artwork.png"
+                            ContentLayout="Left,8"
+                            Clicked="OnScanArtClicked" />
+                    <Label x:Name="ScanArtHint" Style="{StaticResource HintText}" />
+
+                    <Button x:Name="ScanTagsButton"
+                            Style="{StaticResource OutlineButton}"
+                            ImageSource="ic_edit.png"
+                            ContentLayout="Left,8"
+                            Clicked="OnScanTagsClicked" />
+                    <Label x:Name="ScanTagsHint" Style="{StaticResource HintText}" />
+
+                    <Label x:Name="ScanProgress" Style="{StaticResource BodyText}" IsVisible="False" />
+
+                    <BoxView Style="{StaticResource Separator}" />
+
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Grid.Column="0" x:Name="ComposerLabel" Style="{StaticResource BodyText}" VerticalOptions="Center" />
                         <Switch Grid.Column="1" x:Name="ComposerSwitch" Toggled="OnComposerToggled" VerticalOptions="Center" />

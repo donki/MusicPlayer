@@ -9,6 +9,7 @@ public sealed class SettingsService : ISettingsService
     private const string LastSongKey = "last_song_id";
     private const string ShuffleKey = "shuffle";
     private const string RepeatKey = "repeat_mode";
+    private const string IncludeAllAudioKey = "include_all_audio";
 
     public string Language
     {
@@ -45,5 +46,11 @@ public sealed class SettingsService : ISettingsService
     {
         get => Preferences.Get(RepeatKey, 0);
         set => Preferences.Set(RepeatKey, value);
+    }
+
+    public bool IncludeAllAudio
+    {
+        get => Preferences.Get(IncludeAllAudioKey, false);
+        set => Preferences.Set(IncludeAllAudioKey, value);
     }
 }

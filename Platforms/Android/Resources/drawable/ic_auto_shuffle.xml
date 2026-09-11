@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Aleatorio, para el boton propio de Android Auto. Silueta blanca sobre transparente: el coche lo
-    tiñe con el color de su tema, igual que el icono de la notificacion.
+    Aleatorio.
+    Trazos redondeados, los mismos que los iconos de la aplicacion (stroke con extremos redondos),
+    en vez de las siluetas cuadradas de Material. Silueta blanca: el coche la tiñe.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
         android:width="24dp" android:height="24dp"
         android:viewportWidth="24" android:viewportHeight="24"
         android:tint="#FFFFFF">
-    <path android:fillColor="#FFFFFF"
-          android:pathData="M10.6,9.4L8.5,7.3C7.9,6.7 7.1,6.3 6.2,6.3H3v2h3.2c0.4,0 0.8,0.2 1.1,0.5l2.1,2.1L10.6,9.4z" />
-    <path android:fillColor="#FFFFFF"
-          android:pathData="M14.8,6.3l1.6,1.6l-9,9C7.1,17.2 6.7,17.4 6.2,17.4H3v2h3.2c0.9,0 1.8,-0.4 2.4,-1l9,-9l1.6,1.6V6.3H14.8z" />
-    <path android:fillColor="#FFFFFF"
-          android:pathData="M16.4,16.1l-1.6,1.6h4.4v-4.4l-1.6,1.6l-2.4,-2.4l-1.4,1.4L16.4,16.1z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M17,3l4,4l-4,4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M17,13l4,4l-4,4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M3,7h4.5c4,0 5,10 9,10H21" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M3,17h4.5c1.6,0 2.6,-1.6 3.4,-3.4" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+          android:pathData="M14.2,8.7c0.8,-1.2 1.7,-1.7 2.8,-1.7H21" />
 </vector>

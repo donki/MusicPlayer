@@ -23,5 +23,13 @@ public interface ISettingsService
 
     bool Shuffle { get; set; }
 
+    /// <summary>
+    /// Leer todo el audio del indice, no solo lo que el sistema marca como musica. El sistema
+    /// decide «es musica» por la carpeta y el formato, y deja fuera grabaciones, podcasts o lo que
+    /// alguien copio a Descargas. Apagado por defecto: la biblioteca normal no debe llenarse de
+    /// notas de voz.
+    /// </summary>
+    bool IncludeAllAudio { get; set; }
+
     int RepeatMode { get; set; }
 }
