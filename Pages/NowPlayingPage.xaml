@@ -57,22 +57,22 @@
 
             <!-- Modos y acciones sobre la cancion -->
             <Grid Grid.Row="4" ColumnDefinitions="*,*,*,*,*,*">
+                <!-- Mismo orden que en el coche: favorita, aleatorio, repetir. -->
                 <ImageButton Grid.Column="0"
-                             x:Name="ShuffleButton"
-                             Style="{StaticResource RowIconButton}"
-                             Source="ic_shuffle.png"
-                             Clicked="OnShuffleClicked" />
-                <ImageButton Grid.Column="1"
-                             x:Name="RepeatButton"
-                             Style="{StaticResource RowIconButton}"
-                             Source="ic_repeat.png"
-                             Clicked="OnRepeatClicked" />
-                <!-- Corazon: mete o saca la cancion de la lista de favoritas. -->
-                <ImageButton Grid.Column="2"
                              x:Name="FavoriteButton"
                              Style="{StaticResource RowIconButton}"
                              Source="ic_favorite.png"
                              Clicked="OnFavoriteClicked" />
+                <ImageButton Grid.Column="1"
+                             x:Name="ShuffleButton"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_shuffle.png"
+                             Clicked="OnShuffleClicked" />
+                <ImageButton Grid.Column="2"
+                             x:Name="RepeatButton"
+                             Style="{StaticResource RowIconButton}"
+                             Source="ic_repeat.png"
+                             Clicked="OnRepeatClicked" />
                 <ImageButton Grid.Column="3"
                              Style="{StaticResource RowIconButton}"
                              Source="ic_playlist_add.png"

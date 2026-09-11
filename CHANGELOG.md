@@ -8,8 +8,13 @@ Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11)
   favoritas son una lista más —siempre existe, va la primera y no se renombra ni se borra—, así que
   se reproduce y se navega como cualquier otra, en el móvil, en la tablet y en Android Auto, donde
   además está en la raíz y tiene su propio botón (corazón lleno o vacío según la canción).
-- **Android Auto: los botones de aleatorio y repetir dicen cómo están.** El icono de «activado» va
-  de color y con un punto debajo; el de «apagado», en blanco. Antes los dos se veían iguales.
+- **Android Auto: los botones de aleatorio y repetir dicen cómo están.** El coche tiñe todos los
+  iconos de blanco (comprobado en el Desktop Head Unit), así que el color no sirve: el icono de
+  «activado» lleva el glifo recortado sobre un disco lleno. Orden de los botones, en el coche y en
+  *Reproduciendo*: favorita, aleatorio, repetir.
+- **Android Auto: sin más triángulos de aviso.** Una lista, un grupo o una canción sin imagen
+  salía con el triángulo de «no se pudo cargar». Ahora una lista enseña la carátula de su primera
+  canción, un grupo la de la suya, y cuando no hay ninguna, un icono neutro (lista, persona, nota).
 - **Corregido: las carátulas no salían en el coche.** Dos causas. Desde Android 13 el proveedor de
   medios no deja que Android Auto lea las carátulas del sistema, así que ahora se copian reducidas a
   la caché y se sirven por el proveedor de la aplicación, como ya se hacía con las fotos de grupo.

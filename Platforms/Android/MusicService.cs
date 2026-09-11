@@ -196,6 +196,19 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         if (ServiceHelper.GetService<IPlaylistService>() is { } playlists)
             playlists.PlaylistsChanged += OnPlaylistsChanged;
 
+        // Los controladores conocidos que esten instalados reciben permiso sobre las imagenes
+        // desde el principio, sin esperar a que naveguen la biblioteca: la interfaz del sistema
+        // pinta la caratula de la notificacion leyendo la direccion de la sesion, y nunca llama
+        // a OnGetRoot (se veia en el registro: "Permission Denial ... uid=1000").
+        lock (_navegantes)
+        {
+            foreach (var paquete in MediaBrowserCallers)
+            {
+                if (IsPackageInstalled(paquete))
+                    _navegantes.Add(paquete);
+            }
+        }
+
         PublishPlaybackState();
 
         if (PendingRequest is { } pending)
@@ -339,7 +352,9 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             {
                 var subtitle = SongCountText(localization, artist.SongCount);
                 items.Add(Browsable(ArtistPrefix + artist.Name, artist.Name, subtitle,
-                    ImagenParaElCoche(artist.ImagePath)));
+                    ImagenParaElCoche(artist.ImagePath)
+                        ?? PrimeraCaratula(artist.Songs, library)
+                        ?? IconoDeRecurso(Resource.Drawable.ic_auto_artist)));
             }
 
             return items;
@@ -349,9 +364,14 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         {
             foreach (var playlist in playlists?.Playlists ?? [])
             {
+                // Sin imagen el coche pinta un triangulo de aviso, como si fuera un error. Se le
+                // da la caratula de la primera cancion que tenga, y si ninguna tiene, un icono.
                 items.Add(Browsable(PlaylistPrefix + playlist.Id, playlist.Name,
                     SongCountText(localization, playlist.SongIds.Count),
-                    playlist.IsFavorites ? IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on) : null));
+                    playlist.IsFavorites
+                        ? IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on)
+                        : PrimeraCaratula(library.FindByIds(playlist.SongIds), library)
+                            ?? IconoDeRecurso(Resource.Drawable.ic_auto_playlist)));
             }
 
             return items;
@@ -471,6 +491,25 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         }
     }
 
+    /// <summary>La caratula de la primera cancion que tenga una, o <c>null</c>.</summary>
+    private AndroidUri? PrimeraCaratula(IEnumerable<Song> songs, IMusicLibraryService library)
+    {
+        foreach (var song in songs)
+        {
+            if (CaratulaParaElCoche(song, library) is { } art)
+                return art;
+        }
+
+        return null;
+    }
+
+    /// <summary>La foto del grupo de la cancion, si el grupo tiene una puesta o descargada.</summary>
+    private AndroidUri? ImagenDelGrupo(Song song, IMusicLibraryService library)
+    {
+        var name = song.ResolveGroupName(preferComposer: false);
+        return name.Length > 0 ? ImagenParaElCoche(library.FindArtist(name)?.ImagePath) : null;
+    }
+
     private static string CarpetaParaElCoche()
     {
         var carpeta = System.IO.Path.Combine(FileSystem.CacheDirectory, AutoArtFolder);
@@ -517,14 +556,17 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
         foreach (var song in songs.Take(MaxBrowsableChildren))
         {
-            var art = CaratulaParaElCoche(song, library);
+            // Como en el movil: su caratula, si no la foto del grupo, y si no un icono neutro
+            // (sin nada, el coche pinta un triangulo de aviso).
+            var art = CaratulaParaElCoche(song, library)
+                ?? ImagenDelGrupo(song, library)
+                ?? IconoDeRecurso(Resource.Drawable.ic_auto_song);
+
             var builder = new MediaDescriptionCompat.Builder()
                 .SetMediaId($"{SongPrefix}{song.Id}|{contextId}")!
                 .SetTitle(song.Title)!
-                .SetSubtitle(song.ResolveGroupName(preferComposer: false))!;
-
-            if (art is not null)
-                builder.SetIconUri(art);
+                .SetSubtitle(song.ResolveGroupName(preferComposer: false))!
+                .SetIconUri(art)!;
 
             items.Add(new MediaBrowserCompat.MediaItem(builder.Build()!, MediaBrowserCompat.MediaItem.FlagPlayable));
         }
@@ -572,6 +614,19 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         "com.android.bluetooth",
         "com.android.systemui",
     ];
+
+    private bool IsPackageInstalled(string packageName)
+    {
+        try
+        {
+            PackageManager?.GetApplicationInfo(packageName, 0);
+            return true;
+        }
+        catch (PackageManager.NameNotFoundException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>
     /// Decide si un llamante puede navegar la biblioteca.
@@ -1181,10 +1236,23 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             // no habia forma de poner una lista en aleatorio ni de repetir una cancion.
             //
             // El estado se cuenta en el icono y en el rotulo, porque un boton que no dice como esta
-            // obliga a probarlo para averiguarlo. El icono de "activado" es de color y lleva un
-            // punto debajo: el color por si el coche lo respeta, el punto por si lo tiñe de blanco
-            // como hace con los demas. De una forma u otra se distingue de un vistazo.
+            // obliga a probarlo para averiguarlo. Android Auto tiñe todos estos iconos de blanco
+            // —comprobado en el Desktop Head Unit—, asi que el color no vale para nada: el icono de
+            // "activado" lleva el glifo recortado sobre un disco lleno, que se distingue por forma.
+            //
+            // Orden: favorita, aleatorio, repetir. El coche los pinta de izquierda a derecha tal
+            // como se añaden.
             var textos = ServiceHelper.GetService<ILocalizationService>();
+
+            // Favorita: corazon lleno si la cancion esta en la lista, vacio si no.
+            var esFavorita = Current is { } sonando &&
+                (ServiceHelper.GetService<IPlaylistService>()?.IsFavorite(sonando.Id) ?? false);
+
+            state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
+                    FavoriteAction,
+                    textos?[esFavorita ? "AutoFavoriteOn" : "AutoFavoriteOff"] ?? (esFavorita ? "Favorite" : "Add to favorites"),
+                    esFavorita ? Resource.Drawable.ic_auto_favorite_on : Resource.Drawable.ic_auto_favorite)
+                .Build());
 
             state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
                     ShuffleAction,
@@ -1201,16 +1269,6 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
             state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
                     RepeatAction, textos?[repeatKey] ?? repeatKey, repeatIcon)
-                .Build());
-
-            // Favorita: corazon lleno si la cancion esta en la lista, vacio si no.
-            var esFavorita = Current is { } sonando &&
-                (ServiceHelper.GetService<IPlaylistService>()?.IsFavorite(sonando.Id) ?? false);
-
-            state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
-                    FavoriteAction,
-                    textos?[esFavorita ? "AutoFavoriteOn" : "AutoFavoriteOff"] ?? (esFavorita ? "Favorite" : "Add to favorites"),
-                    esFavorita ? Resource.Drawable.ic_auto_favorite_on : Resource.Drawable.ic_auto_favorite)
                 .Build());
 
             var built = state.Build();

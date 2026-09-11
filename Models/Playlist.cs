@@ -23,5 +23,6 @@ public sealed class Playlist
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
 
     /// <summary>La lista de favoritas: ni se renombra ni se borra.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool IsFavorites => Id == FavoritesId;
 }
