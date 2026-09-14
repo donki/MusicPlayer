@@ -1,4 +1,4 @@
-using Android.App;
+﻿using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.Graphics;
@@ -196,6 +196,11 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         if (ServiceHelper.GetService<IPlaylistService>() is { } playlists)
             playlists.PlaylistsChanged += OnPlaylistsChanged;
 
+        // Y la biblioteca: si el coche estaba enseñando «sin permiso» o «sin musica» y en el movil
+        // se concede el permiso o se explora, el arbol se rehace y el error se quita.
+        if (ServiceHelper.GetService<IMusicLibraryService>() is { } libraryService)
+            libraryService.LibraryChanged += OnLibraryChanged;
+
         // Los controladores conocidos que esten instalados reciben permiso sobre las imagenes
         // desde el principio, sin esperar a que naveguen la biblioteca: la interfaz del sistema
         // pinta la caratula de la notificacion leyendo la direccion de la sesion, y nunca llama
@@ -223,6 +228,78 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         PublishPlaybackState();
         NotifyChildrenChanged(PlaylistsId);
         NotifyChildrenChanged(FavoritesId);
+    }
+
+    private void OnLibraryChanged(object? sender, EventArgs e)
+    {
+        _browseError = null;
+        PublishPlaybackState();
+        NotifyChildrenChanged(RootId);
+    }
+
+    // ==================================================================================
+    //  Cuando el coche no puede enseñar nada: decirselo, no dejarlo en blanco
+    // ==================================================================================
+
+    /// <summary>
+    /// Lo que impide cargar la biblioteca ahora mismo, o null si no hay problema. Se publica en
+    /// el estado de reproduccion como error con accion de resolucion, que es lo que Android Auto
+    /// enseña en pantalla (con un boton que abre la aplicacion en el movil).
+    /// </summary>
+    /// <remarks>
+    /// Google rechazo la 202608283 por «unable to load content on the Android Auto environment»
+    /// (2026-09-14): el revisor abre Auto sin haber abierto nunca la aplicacion en el movil, el
+    /// permiso de audio no esta concedido, la biblioteca no se puede leer y el coche veia cuatro
+    /// carpetas vacias sin explicacion. Las Auto App Quality Guidelines piden justo esto: un
+    /// mensaje claro y una forma de resolverlo desde el telefono.
+    /// </remarks>
+    private string? _browseError;
+
+    private const string ErrorLabelExtra = "android.media.extras.ERROR_RESOLUTION_ACTION_LABEL";
+    private const string ErrorIntentExtra = "android.media.extras.ERROR_RESOLUTION_ACTION_INTENT";
+    private const string EmptyLibraryItemId = "empty-library";
+
+    /// <summary>Comprueba permiso y contenido antes de construir el arbol; deja el motivo en <see cref="_browseError"/>.</summary>
+    private bool CanBrowse(IMusicLibraryService library, ILocalizationService? localization)
+    {
+        var access = ServiceHelper.GetService<IMediaAccessService>();
+        if (access is not null && !access.IsGrantedAsync().GetAwaiter().GetResult())
+        {
+            _browseError = localization?["AutoNoPermission"] ?? "Open Music Player on the phone and allow access to your music.";
+            PublishPlaybackState();
+            return false;
+        }
+
+        // Si se concedio el permiso mientras el coche enseñaba el error, hay que retirarlo del
+        // estado publicado: si no, Auto sigue con el aviso aunque el arbol ya se pueda cargar.
+        var hadError = _browseError is not null;
+        _browseError = null;
+        if (hadError)
+            PublishPlaybackState();
+
+        if (!library.HasScanned || hadError)
+            library.ScanAsync().GetAwaiter().GetResult();
+
+        return true;
+    }
+
+    /// <summary>Un unico elemento que explica que no hay musica, en vez de una pantalla vacia.</summary>
+    private MediaBrowserCompat.MediaItem EmptyLibraryItem(ILocalizationService? localization)
+    {
+        var description = new MediaDescriptionCompat.Builder()
+            .SetMediaId(EmptyLibraryItemId)!
+            .SetTitle(localization?["EmptyLibraryTitle"] ?? "No music found")!
+            .SetSubtitle(localization?["AutoEmptyLibrary"] ?? "Copy audio files to the phone and open Music Player once.")!
+            .SetIconUri(IconoDeRecurso(Resource.Drawable.ic_auto_playlist))!
+            .Build()!;
+        return new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FlagPlayable);
+    }
+
+    /// <summary>El intent que abre la aplicacion en el movil, como accion de resolucion del error.</summary>
+    private PendingIntent? OpenAppIntent()
+    {
+        var launch = PackageManager?.GetLaunchIntentForPackage(PackageName!);
+        return launch is null ? null : PendingIntent.GetActivity(this, 1, launch, PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent);
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -308,14 +385,15 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
                 var playlists = ServiceHelper.GetService<IPlaylistService>();
                 var localization = ServiceHelper.GetService<ILocalizationService>();
 
-                if (library is not null && !library.HasScanned)
+                // Android Auto puede arrancar el proceso sin que la interfaz se haya abierto
+                // nunca: la biblioteca todavia esta vacia y hay que leerla aqui. Y si no se puede
+                // (sin permiso), se publica el error en vez de devolver carpetas vacias.
+                if (library is not null && CanBrowse(library, localization))
                 {
-                    // Android Auto puede arrancar el proceso sin que la interfaz se haya abierto
-                    // nunca: en ese caso la biblioteca todavia esta vacia y hay que leerla aqui.
-                    library.ScanAsync().GetAwaiter().GetResult();
+                    items = BuildChildren(parentId, library, playlists, localization);
+                    if (parentId == RootId && library.Songs.Count == 0)
+                        items = [EmptyLibraryItem(localization)];
                 }
-
-                items = BuildChildren(parentId, library, playlists, localization);
             }
             catch (Exception ex)
             {
@@ -1271,6 +1349,20 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             state.AddCustomAction(new PlaybackStateCompat.CustomAction.Builder(
                     RepeatAction, textos?[repeatKey] ?? repeatKey, repeatIcon)
                 .Build());
+
+            // Sin permiso o sin poder leer la biblioteca: el coche enseña este mensaje a pantalla
+            // completa con un boton que abre la aplicacion en el movil. Es lo que pide Android
+            // Auto en vez de una lista vacia.
+            if (_browseError is not null)
+            {
+                state.SetState(PlaybackStateCompat.StateError, 0, 0f);
+                state.SetErrorMessage(PlaybackStateCompat.ErrorCodeAppError, _browseError);
+                var extras = new Bundle();
+                extras.PutString(ErrorLabelExtra, textos?["AutoOpenOnPhone"] ?? "Open on the phone");
+                if (OpenAppIntent() is { } open)
+                    extras.PutParcelable(ErrorIntentExtra, open);
+                state.SetExtras(extras);
+            }
 
             var built = state.Build();
 

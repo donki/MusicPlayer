@@ -2,6 +2,17 @@
 
 Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11).
 
+## 2026.09.14.1
+
+- **Android Auto: el coche dice por qué no hay música.** Google rechazó la 202608283 («unable to
+  load content on the Android Auto environment»): el revisor conecta el coche sin haber abierto
+  nunca la aplicación en el móvil, el permiso de audio no está concedido y el coche veía cuatro
+  carpetas vacías. Ahora, sin permiso, el coche enseña *Abre Music Player en el móvil y permite el
+  acceso a tu música* (con la acción de resolución que abre la aplicación en el móvil); con permiso
+  pero sin ficheros, una única entrada que explica que hay que copiar audio al móvil. En cuanto el
+  móvil concede el permiso o explora, el árbol del coche se rehace solo (comprobado en el Desktop
+  Head Unit).
+
 ## 2026.09.11.1
 
 - **Favoritas**: corazón en *Reproduciendo* y opción en el menú de cualquier canción. Las

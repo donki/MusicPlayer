@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.Extensions.Logging;
 
 namespace MusicPlayer.Services;
@@ -158,6 +158,9 @@ public sealed class LocalizationService : ILocalizationService
         ["ScanningLibrary"] = "Scanning the device…",
         ["EmptyLibraryTitle"] = "No music found",
         ["EmptyLibraryMessage"] = "Copy some audio files to the device and scan again.",
+        ["AutoNoPermission"] = "Open Music Player on the phone and allow access to your music.",
+        ["AutoEmptyLibrary"] = "Copy audio files to the phone and open Music Player once.",
+        ["AutoOpenOnPhone"] = "Open on the phone",
         ["NoResultsTitle"] = "Nothing matches",
         ["NoResultsMessage"] = "No artist, song or album matches your search.",
         ["NoPlaylistsTitle"] = "No playlists yet",
@@ -384,6 +387,9 @@ public sealed class LocalizationService : ILocalizationService
         ["ScanningLibrary"] = "Explorando el dispositivo…",
         ["EmptyLibraryTitle"] = "No se ha encontrado música",
         ["EmptyLibraryMessage"] = "Copia archivos de audio al dispositivo y vuelve a explorar.",
+        ["AutoNoPermission"] = "Abre Music Player en el móvil y permite el acceso a tu música.",
+        ["AutoEmptyLibrary"] = "Copia archivos de audio al móvil y abre Music Player una vez.",
+        ["AutoOpenOnPhone"] = "Abrir en el móvil",
         ["NoResultsTitle"] = "Sin resultados",
         ["NoResultsMessage"] = "Ningún grupo, canción o álbum coincide con la búsqueda.",
         ["NoPlaylistsTitle"] = "Todavía no hay listas",
