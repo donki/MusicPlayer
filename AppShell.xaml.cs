@@ -23,6 +23,46 @@ public partial class AppShell : Shell
         ApplyTexts();
     }
 
+    /// <summary>
+    /// Atras (constitucion Mobile 7). Primero se cierra el menu lateral o el dialogo que haya abierto; despues
+    /// decide la pagina visible (salir del modo seleccion, vaciar el buscador) y el Shell desapila
+    /// las paginas de detalle (grupo, lista). Reproduciendo, Configuracion y Acerca de, abiertas desde
+    /// el menu, vuelven a la Biblioteca. En la Biblioteca la aplicacion se oculta sin cerrarse: la
+    /// musica sigue sonando porque la lleva el servicio de reproduccion, no la pantalla.
+    /// </summary>
+    protected override bool OnBackButtonPressed()
+    {
+        if (FlyoutIsPresented)
+        {
+            FlyoutIsPresented = false;
+            return true;
+        }
+
+        // Un dialogo abierto (menu de una cancion, confirmacion...) se cierra antes que nada.
+        if (SocShared.ModernDialogBack.TryDismiss(CurrentPage))
+            return true;
+
+        if (base.OnBackButtonPressed())
+            return true;
+
+        if (CurrentPage is not LibraryPage)
+        {
+            Dispatcher.Dispatch(async () =>
+            {
+                try { await GoToAsync("//LibraryPage"); }
+                catch (Exception ex) { SocShared.CrashGuard.Log(ex, "Atras a la biblioteca"); }
+            });
+            return true;
+        }
+
+#if ANDROID
+        Platform.CurrentActivity?.MoveTaskToBack(true);
+        return true;
+#else
+        return false;
+#endif
+    }
+
     private void OnLanguageChanged(object? sender, EventArgs e) =>
         MainThread.BeginInvokeOnMainThread(ApplyTexts);
 

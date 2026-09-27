@@ -31,6 +31,13 @@ public partial class SongInfoPage : ContentPage
     private Lyrics _lyrics = Lyrics.Empty;
     private int _currentLine = -1;
 
+    /// <summary>
+    /// Atras (constitucion Mobile 7): con un dialogo abierto encima, lo cierra; si no, la pagina
+    /// modal se cierra sola.
+    /// </summary>
+    protected override bool OnBackButtonPressed() =>
+        SocShared.ModernDialogBack.TryDismiss(this) || base.OnBackButtonPressed();
+
     public SongInfoPage(Song song)
     {
         InitializeComponent();

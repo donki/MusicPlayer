@@ -16,8 +16,8 @@
     <ApplicationId>com.socratic.musicplayer</ApplicationId>
 
     <!-- Versions (constitucion A.4: ambos valores en sincronia, esquema de fecha) -->
-    <ApplicationDisplayVersion>2026.09.14.1</ApplicationDisplayVersion>
-    <ApplicationVersion>2026091401</ApplicationVersion>
+    <ApplicationDisplayVersion>2026.09.28.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2026092800</ApplicationVersion>
 
     <AcceptAndroidSDKLicenses>true</AcceptAndroidSDKLicenses>
 
@@ -40,8 +40,8 @@
     <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
 
-    <AssemblyVersion>2026.08.29.1</AssemblyVersion>
-    <FileVersion>2026.08.29.1</FileVersion>
+    <AssemblyVersion>2026.9.28.0</AssemblyVersion>
+    <FileVersion>2026.9.28.0</FileVersion>
   </PropertyGroup>
 
   <!--
@@ -97,6 +97,8 @@
   <ItemGroup>
     <Compile Include="..\Shared\AuthorNotes.cs" Link="AuthorNotes.cs" />
     <Compile Include="..\Shared\ModernDialog.cs" Link="ModernDialog.cs" />
+    <Compile Include="..\Shared\CrashGuard.cs" Link="CrashGuard.cs" />
+    <Compile Include="..\Shared\ModernDialogBack.cs" Link="ModernDialogBack.cs" />
   </ItemGroup>
 
   <!-- Firma Release centralizada (constitucion E.8b). La contrasena se pasa por CLI. -->

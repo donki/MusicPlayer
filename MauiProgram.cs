@@ -9,6 +9,11 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        // Gestor global de excepciones (constitucion General 6.12): un error inesperado se registra
+        // y se avisa en el idioma elegido en la app, sin cerrarla.
+        SocShared.CrashGuard.Install("Music Player", language: () =>
+            IPlatformApplication.Current?.Services.GetService<ILocalizationService>()?.CurrentLanguage);
+
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
 

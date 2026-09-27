@@ -27,6 +27,13 @@ public partial class PlaylistPickerPage : ContentPage
     private readonly IReadOnlyList<Song> _songs;
     private readonly ObservableCollection<PlaylistChoiceRow> _rows = [];
 
+    /// <summary>
+    /// Atras (constitucion Mobile 7): con un dialogo abierto encima, lo cierra; si no, la pagina
+    /// modal se cierra sola.
+    /// </summary>
+    protected override bool OnBackButtonPressed() =>
+        SocShared.ModernDialogBack.TryDismiss(this) || base.OnBackButtonPressed();
+
     public PlaylistPickerPage(Song song)
         : this([song])
     {

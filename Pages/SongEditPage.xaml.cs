@@ -19,6 +19,13 @@ public partial class SongEditPage : ContentPage
     private readonly ICustomArtService _customArt;
     private readonly Song _song;
 
+    /// <summary>
+    /// Atras (constitucion Mobile 7): con un dialogo abierto encima, lo cierra; si no, la pagina
+    /// modal se cierra sola.
+    /// </summary>
+    protected override bool OnBackButtonPressed() =>
+        SocShared.ModernDialogBack.TryDismiss(this) || base.OnBackButtonPressed();
+
     public SongEditPage(Song song)
     {
         InitializeComponent();

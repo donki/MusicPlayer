@@ -88,10 +88,23 @@ public partial class LibraryPage : ContentPage
 
     /// <summary>
     /// La flecha atras sale del modo de seleccion antes que de la pagina: es lo que espera
-    /// cualquiera que haya usado la seleccion multiple de Android.
+    /// cualquiera que haya usado la seleccion multiple de Android. Despues vacia el buscador, si hay
+    /// algo escrito; solo entonces la aplicacion se oculta (lo decide el Shell).
     /// </summary>
-    protected override bool OnBackButtonPressed() =>
-        _selection.Exit() || base.OnBackButtonPressed();
+    protected override bool OnBackButtonPressed()
+    {
+        if (_selection.Exit())
+            return true;
+
+        if (!string.IsNullOrEmpty(SearchEntry.Text))
+        {
+            SearchEntry.Unfocus();
+            SearchEntry.Text = string.Empty;
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
+    }
 
     protected override async void OnAppearing()
     {

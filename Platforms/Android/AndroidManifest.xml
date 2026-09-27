@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+  <!--
+    enableOnBackInvokedCallback="false": con targetSdk 36, Android 16 activa el «atras predictivo» y
+    el boton de atras deja de llegar al Shell y a las paginas: la aplicacion se cerraba desde
+    cualquier pantalla (constitucion Mobile 7).
+  -->
   <application android:allowBackup="true"
                android:icon="@mipmap/appicon"
                android:roundIcon="@mipmap/appicon_round"
-               android:supportsRtl="true">
+               android:supportsRtl="true"
+               android:enableOnBackInvokedCallback="false">
 
     <!--
       Declara la aplicacion como app de medios para Android Auto. Sin esta meta-data el coche no

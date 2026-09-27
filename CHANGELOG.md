@@ -2,6 +2,20 @@
 
 Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11).
 
+## 2026.09.28.0
+
+- **Un error inesperado ya no cierra la aplicación** (constitución General §6.12): se apunta con su
+  traza en `crash.log`, sale un aviso en tu idioma y la aplicación sigue abierta.
+- **El botón de atrás del móvil, como se espera** (Mobile §7): en Android 16 cerraba la aplicación
+  desde cualquier pantalla (el «atrás predictivo»). Ahora primero cierra el menú lateral o el diálogo abierto, sale del
+  modo selección o vacía el buscador; desde un grupo o una lista vuelve a la biblioteca, y desde
+  Reproduciendo, Configuración o Acerca de, también. En la biblioteca la aplicación se oculta sin
+  cerrarse y **la música sigue sonando**.
+
+*English:* an unexpected error no longer closes the app (it is logged and you get a notice in your
+language). The back button now closes the side menu, an open dialog, selection mode or search first, goes back to
+the library from any other screen, and on the library hides the app while the music keeps playing.
+
 ## 2026.09.14.1
 
 - **Android Auto: el coche dice por qué no hay música.** Google rechazó la 202608283 («unable to
