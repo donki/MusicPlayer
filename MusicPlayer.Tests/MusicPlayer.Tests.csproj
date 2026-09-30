@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de la logica de Music Player. La app es un solo proyecto MAUI para Android, asi que aqui
+    se enlazan los ficheros puros (modelos, servicios sin plataforma) y se compilan para net10.0.
+    Lo que la app toma de MAUI (FileSystem, Preferences) lo sustituyen las cuñas de Shims/.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>MusicPlayer.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xunit (Apache-2.0), su runner (Apache-2.0), Microsoft.NET.Test.Sdk (MIT) y coverlet (MIT): solo para probar, no se distribuyen. -->
+    <PackageReference Include="coverlet.collector" Version="10.1.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Microsoft.Maui.Storage" />
+  </ItemGroup>
+
+  <!-- Codigo de la app que se prueba (enlazado, no copiado). -->
+  <ItemGroup>
+    <Compile Include="..\Models\ArtistGroup.cs" Link="App\Models\ArtistGroup.cs" />
+    <Compile Include="..\Models\Lyrics.cs" Link="App\Models\Lyrics.cs" />
+    <Compile Include="..\Models\Playlist.cs" Link="App\Models\Playlist.cs" />
+    <Compile Include="..\Models\RepeatMode.cs" Link="App\Models\RepeatMode.cs" />
+    <Compile Include="..\Models\Song.cs" Link="App\Models\Song.cs" />
+    <Compile Include="..\Models\SongTags.cs" Link="App\Models\SongTags.cs" />
+    <Compile Include="..\Helpers\TimeFormatter.cs" Link="App\Helpers\TimeFormatter.cs" />
+    <Compile Include="..\Services\ArtistInfoService.cs" Link="App\Services\ArtistInfoService.cs" />
+    <Compile Include="..\Services\CustomArtService.cs" Link="App\Services\CustomArtService.cs" />
+    <Compile Include="..\Services\IArtistInfoService.cs" Link="App\Services\IArtistInfoService.cs" />
+    <Compile Include="..\Services\ICustomArtService.cs" Link="App\Services\ICustomArtService.cs" />
+    <Compile Include="..\Services\ILocalizationService.cs" Link="App\Services\ILocalizationService.cs" />
+    <Compile Include="..\Services\IPlaylistService.cs" Link="App\Services\IPlaylistService.cs" />
+    <Compile Include="..\Services\ISettingsService.cs" Link="App\Services\ISettingsService.cs" />
+    <Compile Include="..\Services\ISongLookupService.cs" Link="App\Services\ISongLookupService.cs" />
+    <Compile Include="..\Services\ISongTagsService.cs" Link="App\Services\ISongTagsService.cs" />
+    <Compile Include="..\Services\LibraryRules.cs" Link="App\Services\LibraryRules.cs" />
+    <Compile Include="..\Services\LocalizationService.cs" Link="App\Services\LocalizationService.cs" />
+    <Compile Include="..\Services\LyricsFormats.cs" Link="App\Services\LyricsFormats.cs" />
+    <Compile Include="..\Services\PlaylistService.cs" Link="App\Services\PlaylistService.cs" />
+    <Compile Include="..\Services\QueueOrder.cs" Link="App\Services\QueueOrder.cs" />
+    <Compile Include="..\Services\SettingsService.cs" Link="App\Services\SettingsService.cs" />
+    <Compile Include="..\Services\SongLookupService.cs" Link="App\Services\SongLookupService.cs" />
+    <Compile Include="..\Services\SongTagsService.cs" Link="App\Services\SongTagsService.cs" />
+  </ItemGroup>
+
+</Project>

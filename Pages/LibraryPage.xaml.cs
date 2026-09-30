@@ -344,12 +344,7 @@ public partial class LibraryPage : ContentPage
         };
     }
 
-    private static bool MatchesSearch(Song song, string term) =>
-        song.Title.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
-        song.Artist.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
-        song.AlbumArtist.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
-        song.Composer.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
-        song.Album.Contains(term, StringComparison.CurrentCultureIgnoreCase);
+    private static bool MatchesSearch(Song song, string term) => LibraryRules.MatchesSearch(song, term);
 
     private string SongCountText(int count) =>
         count == 1 ? _localization["SongCountOne"] : _localization.Format("SongCountMany", count);

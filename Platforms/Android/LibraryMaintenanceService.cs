@@ -362,19 +362,8 @@ public sealed class LibraryMaintenanceService : ILibraryMaintenanceService
         var fileYear = ParseLeadingNumber(retriever.ExtractMetadata(MetadataKey.Year))
             ?? ParseLeadingNumber(retriever.ExtractMetadata(MetadataKey.Date));
 
-        // El indice pone el nombre del fichero como titulo cuando la etiqueta esta vacia: eso
-        // cuenta como vacio.
-        var titleIsFileName = string.Equals(song.Title,
-            Path.GetFileNameWithoutExtension(song.FilePath), StringComparison.Ordinal);
-
-        var tags = new SongTags(
-            Title: titleIsFileName && fileTitle.Length > 0 ? fileTitle : song.Title,
-            Artist: song.Artist.Length == 0 ? fileArtist : song.Artist,
-            AlbumArtist: song.AlbumArtist.Length == 0 ? fileAlbumArtist : song.AlbumArtist,
-            Album: song.Album.Length == 0 ? fileAlbum : song.Album,
-            Composer: song.Composer.Length == 0 ? fileComposer : song.Composer,
-            Track: song.Track == 0 ? fileTrack ?? 0 : song.Track,
-            Year: song.Year == 0 ? fileYear ?? 0 : song.Year);
+        var tags = LibraryRules.CompleteTags(song, fileTitle, fileArtist, fileAlbumArtist, fileAlbum,
+            fileComposer, fileTrack, fileYear);
 
         if (tags == SongTags.From(song))
             return false;
@@ -383,22 +372,8 @@ public sealed class LibraryMaintenanceService : ILibraryMaintenanceService
         return true;
     }
 
-    private static string Clean(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        var trimmed = value.Trim();
-        return string.Equals(trimmed, "<unknown>", StringComparison.OrdinalIgnoreCase) ? string.Empty : trimmed;
-    }
+    private static string Clean(string? value) => LibraryRules.CleanTag(value);
 
     /// <summary>«3/12» es la pista 3; «2024-05-01» es el año 2024.</summary>
-    private static int? ParseLeadingNumber(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        var digits = new string(value.Trim().TakeWhile(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var number) && number > 0 ? number : null;
-    }
+    private static int? ParseLeadingNumber(string? value) => LibraryRules.ParseLeadingNumber(value);
 }

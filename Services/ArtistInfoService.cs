@@ -93,8 +93,11 @@ public sealed class ArtistInfoService : IArtistInfoService, IDisposable
             StoreCache(name, fetched);
             return ToInfo(fetched);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // Solo se propaga la cancelacion que pidio quien llama. El plazo agotado de HttpClient
+            // tambien llega como TaskCanceledException, y antes se escapaba por aqui: una red lenta
+            // cortaba la descarga de fotos de la biblioteca y tumbaba el boton de actualizar la ficha.
             throw;
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException or TaskCanceledException)

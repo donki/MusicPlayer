@@ -27,3 +27,6 @@ socratic.keystore
 *.keystore
 *.log
 releases/
+
+# Resultados de las pruebas y de la cobertura
+TestResults/

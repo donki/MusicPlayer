@@ -476,26 +476,14 @@ public sealed class MusicLibraryService : IMusicLibraryService
 
     private List<ArtistGroup> Group(IReadOnlyList<Song> songs)
     {
-        var preferComposer = _settings.PreferComposer;
+        var groups = LibraryRules.Group(songs, _settings.PreferComposer);
 
-        return songs
-            .GroupBy(song => song.ResolveGroupName(preferComposer))
-            .Where(group => group.Key.Length > 0)
-            .Select(group => new ArtistGroup
-            {
-                Name = group.Key,
-                Songs = group
-                    .OrderBy(song => song.Album, StringComparer.CurrentCultureIgnoreCase)
-                    .ThenBy(song => song.Track)
-                    .ThenBy(song => song.Title, StringComparer.CurrentCultureIgnoreCase)
-                    .ToList(),
-                // La foto solo se pinta si ya estaba descargada: la rejilla no dispara consultas
-                // de red al desplazarse.
-                // La puesta a mano manda sobre la descargada: es una decision del usuario y no
-                // la puede pisar una busqueda posterior.
-                ImagePath = _customArt.ForArtist(group.Key) ?? _artistInfo.GetCachedImagePath(group.Key),
-            })
-            .OrderBy(artist => artist.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        // La foto solo se pinta si ya estaba descargada: la rejilla no dispara consultas de red al
+        // desplazarse. La puesta a mano manda sobre la descargada: es una decision del usuario y no
+        // la puede pisar una busqueda posterior.
+        foreach (var group in groups)
+            group.ImagePath = _customArt.ForArtist(group.Name) ?? _artistInfo.GetCachedImagePath(group.Name);
+
+        return groups;
     }
 }

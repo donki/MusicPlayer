@@ -16,8 +16,8 @@
     <ApplicationId>com.socratic.musicplayer</ApplicationId>
 
     <!-- Versions (constitucion A.4: ambos valores en sincronia, esquema de fecha) -->
-    <ApplicationDisplayVersion>2026.09.28.0</ApplicationDisplayVersion>
-    <ApplicationVersion>2026092800</ApplicationVersion>
+    <ApplicationDisplayVersion>2026.09.30.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2026093000</ApplicationVersion>
 
     <AcceptAndroidSDKLicenses>true</AcceptAndroidSDKLicenses>
 
@@ -40,8 +40,11 @@
     <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
     <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
 
-    <AssemblyVersion>2026.9.28.0</AssemblyVersion>
-    <FileVersion>2026.9.28.0</FileVersion>
+    <!-- El proyecto de pruebas vive dentro del repo: la app no compila sus ficheros. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);MusicPlayer.Tests\**</DefaultItemExcludes>
+
+    <AssemblyVersion>2026.9.30.0</AssemblyVersion>
+    <FileVersion>2026.9.30.0</FileVersion>
   </PropertyGroup>
 
   <!--

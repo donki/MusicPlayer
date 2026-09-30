@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cobertura con coverlet. El codigo de la app va enlazado dentro del ensamblado de pruebas, asi que
+  se incluye ese ensamblado y se excluyen los ficheros de las propias pruebas.
+  Uso: dotnet test MusicPlayer.Tests -s MusicPlayer.Tests/coverlet.runsettings
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <IncludeTestAssembly>true</IncludeTestAssembly>
+          <ExcludeByFile>**/MusicPlayer.Tests/**/*.cs</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

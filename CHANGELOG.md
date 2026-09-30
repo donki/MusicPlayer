@@ -2,6 +2,23 @@
 
 Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11).
 
+## 2026.09.30.0
+
+- **Un grupo ya no sale dos veces por una mayúscula.** «Queen» y «queen» formaban dos tarjetas, pero
+  al abrir cualquiera de las dos se abría siempre la misma y las canciones de la otra no se podían
+  alcanzar (tampoco desde el coche). Ahora es un solo grupo, con el nombre escrito como lo escriben
+  más canciones.
+- **Una red lenta ya no corta la búsqueda de fotos y fichas.** Cuando una consulta a MusicBrainz o
+  Wikipedia agotaba su plazo, el error se tomaba por una cancelación y se escapaba: se paraba la
+  descarga de fotos de la biblioteca y el botón de actualizar la ficha del grupo fallaba. Ahora se
+  trata como «sin respuesta» y se sigue.
+- **Pruebas automatizadas** (`MusicPlayer.Tests`, 181 pruebas). La cola, la agrupación y la
+  búsqueda salen del código de Android a `QueueOrder` y `LibraryRules` para poder probarlas; se
+  comportan igual.
+
+*English:* a band no longer shows up twice because of a capital letter (the second card could not
+be opened); a slow network no longer stops the artist photo and bio lookups. Automated tests added.
+
 ## 2026.09.28.0
 
 - **Un error inesperado ya no cierra la aplicación** (constitución General §6.12): se apunta con su

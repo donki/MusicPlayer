@@ -823,32 +823,12 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     public void PlayFromSearch(string? query)
     {
         var library = ServiceHelper.GetService<IMusicLibraryService>();
-        if (library is null || library.Songs.Count == 0)
+        if (library is null)
             return;
 
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            PlayQueue(library.Songs, 0);
-            return;
-        }
-
-        var term = query.Trim();
-
-        var artist = library.Artists.FirstOrDefault(item =>
-            item.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase));
-        if (artist is not null)
-        {
-            PlayQueue(artist.Songs, 0);
-            return;
-        }
-
-        var matches = library.Songs
-            .Where(song => song.Title.Contains(term, StringComparison.CurrentCultureIgnoreCase)
-                        || song.Album.Contains(term, StringComparison.CurrentCultureIgnoreCase))
-            .ToList();
-
-        if (matches.Count > 0)
-            PlayQueue(matches, 0);
+        var queue = LibraryRules.ResolveVoiceQuery(library.Artists, library.Songs, query);
+        if (queue.Count > 0)
+            PlayQueue(queue, 0);
     }
 
     private List<Song> ResolveContextQueue(string contextId, IMusicLibraryService library)
@@ -926,7 +906,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         if (_order.Count == 0)
             return;
 
-        _orderIndex = _orderIndex <= 0 ? _order.Count - 1 : _orderIndex - 1;
+        _orderIndex = QueueOrder.Previous(_orderIndex, _order.Count);
         StartCurrent();
     }
 
@@ -988,37 +968,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
     private void BuildOrder(int startAt)
     {
-        if (_queue.Count == 0)
-        {
-            _order = [];
-            _orderIndex = -1;
-            return;
-        }
-
-        var indices = Enumerable.Range(0, _queue.Count).ToList();
-
-        if (Shuffle)
-        {
-            // Barajado de Fisher-Yates, con la pista elegida en primer lugar para que la
-            // reproduccion aleatoria empiece justo por lo que el usuario ha pulsado.
-            for (var i = indices.Count - 1; i > 0; i--)
-            {
-                var j = Random.Shared.Next(i + 1);
-                (indices[i], indices[j]) = (indices[j], indices[i]);
-            }
-
-            var position = indices.IndexOf(startAt);
-            if (position > 0)
-                (indices[0], indices[position]) = (indices[position], indices[0]);
-
-            _order = indices;
-            _orderIndex = 0;
-        }
-        else
-        {
-            _order = indices;
-            _orderIndex = startAt;
-        }
+        // Barajado y orden en QueueOrder, que es codigo puro y tiene sus pruebas.
+        (_order, _orderIndex) = QueueOrder.Build(_queue.Count, startAt, Shuffle, Random.Shared);
     }
 
     private void StartCurrent(bool autoPlay = true)
@@ -1118,9 +1069,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         if (_order.Count == 0)
             return;
 
-        var isLast = _orderIndex >= _order.Count - 1;
-
-        if (isLast && Repeat == RepeatMode.Off && !userRequested)
+        var next = QueueOrder.Next(_orderIndex, _order.Count, Repeat, userRequested);
+        if (next is null)
         {
             // Fin de la cola sin repeticion: se para, no se vuelve a empezar en silencio.
             Pause();
@@ -1128,7 +1078,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             return;
         }
 
-        _orderIndex = isLast ? 0 : _orderIndex + 1;
+        _orderIndex = next.Value;
         StartCurrent();
     }
 

@@ -95,6 +95,27 @@ dotnet publish MusicPlayer.csproj -c Release -f net10.0-android36.0 `
 .\install_mumu.ps1 -BuildFirst -Launch -PushTestAudio
 ```
 
+### Pruebas automatizadas
+
+**181 pruebas** (xUnit), todas pasan · cobertura del código probado **99,5 %** de líneas (93 % de
+ramas) · sobre toda la app **25,2 %** (1 701 de ~6 740 líneas; el resto es interfaz MAUI y
+código de Android: reproductor, Android Auto, índice de medios) · el banco tarda **~7 s** (las
+búsquedas en línea respetan el límite de una petición por segundo de MusicBrainz). Medido el
+2026-09-30.
+
+```powershell
+dotnet test MusicPlayer.Tests
+# con cobertura (coverlet) y resumen (ReportGenerator, herramienta local del repo)
+dotnet test MusicPlayer.Tests -s MusicPlayer.Tests/coverlet.runsettings --collect:"XPlat Code Coverage"
+dotnet tool restore; dotnet tool run reportgenerator -reports:MusicPlayer.Tests/TestResults/*/coverage.cobertura.xml -targetdir:MusicPlayer.Tests/TestResults/report -reporttypes:TextSummary
+```
+
+Se prueban la cola (orden, aleatorio, siguiente/anterior con cada repetición), la agrupación por
+grupo o compositor, la búsqueda (buscador y voz), el completado de etiquetas, las listas y
+favoritas, las etiquetas corregidas, las letras (LRC, ID3v2 USLT/SYLT, FLAC), las carátulas
+propias, los ajustes, los idiomas y las búsquedas en línea (MusicBrainz, iTunes, Deezer,
+Wikidata, Wikipedia) contra un servidor de mentira: ninguna prueba sale a la red.
+
 ### Probar Android Auto
 
 Android Auto no funciona en MuMu. Para validarlo hace falta un dispositivo real con la aplicación
