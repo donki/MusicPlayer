@@ -119,7 +119,8 @@ public partial class LibraryPage : ContentPage
         _localization.LanguageChanged += OnLanguageChanged;
 
         await EnsureLibraryAsync();
-        await _updates.CheckAndPromptAsync(this);
+        await _updates.CheckAndPromptAsync((title, message, accept, cancel) =>
+            SocShared.ModernDialog.AlertAsync(this, title, message, accept, cancel));
     }
 
     protected override void OnDisappearing()

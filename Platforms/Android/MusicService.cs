@@ -43,21 +43,17 @@ namespace MusicPlayer.Platforms.Android;
 public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAudioFocusChangeListener
 {
     // --- Identificadores del arbol que navega Android Auto ---
-    public const string RootId = "root";
-    public const string ArtistsId = "artists";
-    public const string PlaylistsId = "playlists";
-    public const string AllSongsId = "allsongs";
+    public const string RootId = BrowseTree.RootId;
+    public const string ArtistsId = BrowseTree.ArtistsId;
+    public const string PlaylistsId = BrowseTree.PlaylistsId;
+    public const string AllSongsId = BrowseTree.AllSongsId;
     /// <summary>Favoritas en la raiz del coche: es una lista mas, pero merece estar a un toque.</summary>
-    public const string FavoritesId = "playlist|" + Playlist.FavoritesId;
-    private const string ArtistPrefix = "artist|";
-    private const string PlaylistPrefix = "playlist|";
-    private const string SongPrefix = "song|";
+    public const string FavoritesId = BrowseTree.FavoritesId;
 
     private const string ChannelId = "playback";
     private const int NotificationId = 1;
 
     /// <summary>Android Auto no pagina: una lista enorme tarda y se corta sola. Se acota aqui.</summary>
-    private const int MaxBrowsableChildren = 500;
 
     /// <summary>
     /// Quienes han navegado la biblioteca (Android Auto, el Asistente, el Bluetooth del coche, la
@@ -110,9 +106,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     private AudioFocusRequestClass? _focusRequest;
     private ILogger? _logger;
 
-    private List<Song> _queue = [];
-    private List<int> _order = [];
-    private int _orderIndex = -1;
+    /// <summary>Cola, orden, aleatorio y repeticion: codigo puro con sus pruebas.</summary>
+    private readonly PlaybackQueue _queue = new();
     private bool _isForeground;
     private bool _wasPlayingBeforeFocusLoss;
 
@@ -123,16 +118,15 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     /// </summary>
     private bool _startPaused;
 
-    public bool Shuffle { get; private set; }
+    public bool Shuffle => _queue.Shuffle;
 
-    public RepeatMode Repeat { get; private set; } = RepeatMode.Off;
+    public RepeatMode Repeat => _queue.Repeat;
 
-    public IReadOnlyList<Song> Queue => _queue;
+    public IReadOnlyList<Song> Queue => _queue.Songs;
 
-    public Song? Current =>
-        _orderIndex >= 0 && _orderIndex < _order.Count ? _queue[_order[_orderIndex]] : null;
+    public Song? Current => _queue.Current;
 
-    public int QueueIndex => _orderIndex >= 0 && _orderIndex < _order.Count ? _order[_orderIndex] : -1;
+    public int QueueIndex => _queue.QueueIndex;
 
     public bool IsPlaying
     {
@@ -188,8 +182,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         var settings = ServiceHelper.GetService<ISettingsService>();
         if (settings is not null)
         {
-            Shuffle = settings.Shuffle;
-            Repeat = (RepeatMode)settings.RepeatMode;
+            _queue.SetShuffle(settings.Shuffle);
+            _queue.Repeat = (RepeatMode)settings.RepeatMode;
         }
 
         // El corazon del coche y sus listas tienen que reflejar lo que se marque en el movil.
@@ -207,7 +201,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         // a OnGetRoot (se veia en el registro: "Permission Denial ... uid=1000").
         lock (_navegantes)
         {
-            foreach (var paquete in MediaBrowserCallers)
+            foreach (var paquete in BrowseTree.KnownCallers)
             {
                 if (IsPackageInstalled(paquete))
                     _navegantes.Add(paquete);
@@ -404,73 +398,49 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         });
     }
 
+    /// <summary>El arbol sale de <see cref="BrowseTree"/>; aqui solo se le ponen las imagenes.</summary>
     private List<MediaBrowserCompat.MediaItem> BuildChildren(
         string? parentId,
         IMusicLibraryService? library,
         IPlaylistService? playlists,
         ILocalizationService? localization)
     {
-        var items = new List<MediaBrowserCompat.MediaItem>();
-        if (library is null || parentId is null)
-            return items;
+        if (library is null)
+            return [];
 
-        if (parentId == RootId)
+        return BrowseTree.Children(parentId, library, playlists, localization)
+            .Select(node => ToMediaItem(node, library))
+            .ToList();
+    }
+
+    private MediaBrowserCompat.MediaItem ToMediaItem(BrowseNode node, IMusicLibraryService library)
+    {
+        var icon = node.Icon switch
         {
-            items.Add(Browsable(FavoritesId, localization?["Favorites"] ?? "Favorites",
-                iconUri: IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on)));
-            items.Add(Browsable(ArtistsId, localization?["TabArtists"] ?? "Artists"));
-            items.Add(Browsable(PlaylistsId, localization?["TabPlaylists"] ?? "Playlists"));
-            items.Add(Browsable(AllSongsId, localization?["TabSongs"] ?? "Songs"));
-            return items;
-        }
+            BrowseIcon.Favorites => IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on),
+            BrowseIcon.Artist => ImagenParaElCoche(node.Artist?.ImagePath)
+                ?? PrimeraCaratula(node.Songs ?? [], library)
+                ?? IconoDeRecurso(Resource.Drawable.ic_auto_artist),
+            BrowseIcon.Playlist => PrimeraCaratula(node.Songs ?? [], library)
+                ?? IconoDeRecurso(Resource.Drawable.ic_auto_playlist),
+            // Como en el movil: su caratula, si no la foto del grupo, y si no un icono neutro (sin
+            // nada, el coche pinta un triangulo de aviso).
+            BrowseIcon.Song => CaratulaParaElCoche(node.Song!, library)
+                ?? ImagenDelGrupo(node.Song!, library)
+                ?? IconoDeRecurso(Resource.Drawable.ic_auto_song),
+            _ => null,
+        };
 
-        if (parentId == ArtistsId)
-        {
-            foreach (var artist in library.Artists.Take(MaxBrowsableChildren))
-            {
-                var subtitle = SongCountText(localization, artist.SongCount);
-                items.Add(Browsable(ArtistPrefix + artist.Name, artist.Name, subtitle,
-                    ImagenParaElCoche(artist.ImagePath)
-                        ?? PrimeraCaratula(artist.Songs, library)
-                        ?? IconoDeRecurso(Resource.Drawable.ic_auto_artist)));
-            }
+        var builder = new MediaDescriptionCompat.Builder()
+            .SetMediaId(node.MediaId)!
+            .SetTitle(node.Title)!;
+        if (node.Subtitle is not null)
+            builder.SetSubtitle(node.Subtitle);
+        if (icon is not null)
+            builder.SetIconUri(icon);
 
-            return items;
-        }
-
-        if (parentId == PlaylistsId)
-        {
-            foreach (var playlist in playlists?.Playlists ?? [])
-            {
-                // Sin imagen el coche pinta un triangulo de aviso, como si fuera un error. Se le
-                // da la caratula de la primera cancion que tenga, y si ninguna tiene, un icono.
-                items.Add(Browsable(PlaylistPrefix + playlist.Id, playlist.Name,
-                    SongCountText(localization, playlist.SongIds.Count),
-                    playlist.IsFavorites
-                        ? IconoDeRecurso(Resource.Drawable.ic_auto_favorite_on)
-                        : PrimeraCaratula(library.FindByIds(playlist.SongIds), library)
-                            ?? IconoDeRecurso(Resource.Drawable.ic_auto_playlist)));
-            }
-
-            return items;
-        }
-
-        if (parentId == AllSongsId)
-            return Playables(library.Songs.Take(MaxBrowsableChildren), AllSongsId, library);
-
-        if (parentId.StartsWith(ArtistPrefix, StringComparison.Ordinal))
-        {
-            var artist = library.FindArtist(parentId[ArtistPrefix.Length..]);
-            return artist is null ? items : Playables(artist.Songs, parentId, library);
-        }
-
-        if (parentId.StartsWith(PlaylistPrefix, StringComparison.Ordinal))
-        {
-            var playlist = playlists?.Find(parentId[PlaylistPrefix.Length..]);
-            return playlist is null ? items : Playables(library.FindByIds(playlist.SongIds), parentId, library);
-        }
-
-        return items;
+        return new MediaBrowserCompat.MediaItem(builder.Build()!,
+            node.Playable ? MediaBrowserCompat.MediaItem.FlagPlayable : MediaBrowserCompat.MediaItem.FlagBrowsable);
     }
 
     /// <summary>
@@ -627,72 +597,6 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     private AndroidUri? IconoDeRecurso(int drawable) =>
         AndroidUri.Parse($"android.resource://{PackageName}/{drawable}");
 
-    private List<MediaBrowserCompat.MediaItem> Playables(
-        IEnumerable<Song> songs, string contextId, IMusicLibraryService library)
-    {
-        var items = new List<MediaBrowserCompat.MediaItem>();
-
-        foreach (var song in songs.Take(MaxBrowsableChildren))
-        {
-            // Como en el movil: su caratula, si no la foto del grupo, y si no un icono neutro
-            // (sin nada, el coche pinta un triangulo de aviso).
-            var art = CaratulaParaElCoche(song, library)
-                ?? ImagenDelGrupo(song, library)
-                ?? IconoDeRecurso(Resource.Drawable.ic_auto_song);
-
-            var builder = new MediaDescriptionCompat.Builder()
-                .SetMediaId($"{SongPrefix}{song.Id}|{contextId}")!
-                .SetTitle(song.Title)!
-                .SetSubtitle(song.ResolveGroupName(preferComposer: false))!
-                .SetIconUri(art)!;
-
-            items.Add(new MediaBrowserCompat.MediaItem(builder.Build()!, MediaBrowserCompat.MediaItem.FlagPlayable));
-        }
-
-        return items;
-    }
-
-    private static MediaBrowserCompat.MediaItem Browsable(
-        string mediaId, string title, string? subtitle = null, AndroidUri? iconUri = null)
-    {
-        var builder = new MediaDescriptionCompat.Builder()
-            .SetMediaId(mediaId)!
-            .SetTitle(title)!;
-
-        if (subtitle is not null)
-            builder.SetSubtitle(subtitle);
-        if (iconUri is not null)
-            builder.SetIconUri(iconUri);
-
-        return new MediaBrowserCompat.MediaItem(builder.Build()!, MediaBrowserCompat.MediaItem.FlagBrowsable);
-    }
-
-    private static string SongCountText(ILocalizationService? localization, int count)
-    {
-        if (localization is null)
-            return count == 1 ? "1 song" : $"{count} songs";
-
-        return count == 1 ? localization["SongCountOne"] : localization.Format("SongCountMany", count);
-    }
-
-    /// <summary>
-    /// Controladores de medios que pueden navegar la biblioteca, ademas de la propia aplicacion.
-    /// </summary>
-    /// <remarks>
-    /// Android Auto proyectado desde el movil, el simulador de escritorio, el asistente y el
-    /// puente de Bluetooth, que es el que usa el equipo del coche cuando no va por cable.
-    /// </remarks>
-    private static readonly string[] MediaBrowserCallers =
-    [
-        "com.google.android.projection.gearhead",
-        "com.google.android.autosimulator",
-        "com.google.android.carassistant",
-        "com.google.android.googlequicksearchbox",
-        "com.google.android.wearable.app",
-        "com.android.bluetooth",
-        "com.android.systemui",
-    ];
-
     private bool IsPackageInstalled(string packageName)
     {
         try
@@ -730,22 +634,12 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     /// </remarks>
     private bool IsCallerAllowed(string clientPackageName)
     {
-        if (string.Equals(clientPackageName, PackageName, StringComparison.Ordinal))
-            return true;
-
         try
         {
-            if (PackageManager?.CheckPermission(
-                    global::Android.Manifest.Permission.MediaContentControl,
-                    clientPackageName) == Permission.Granted)
-            {
-                return true;
-            }
-
-            if (!MediaBrowserCallers.Contains(clientPackageName, StringComparer.Ordinal))
-                return false;
-
-            return IsSystemOrFromPlay(clientPackageName);
+            return BrowseTree.IsCallerAllowed(clientPackageName, PackageName ?? string.Empty,
+                () => PackageManager?.CheckPermission(global::Android.Manifest.Permission.MediaContentControl,
+                    clientPackageName) == Permission.Granted,
+                () => IsSystemOrFromPlay(clientPackageName));
         }
         catch (Exception ex)
         {
@@ -776,7 +670,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             : manager.GetInstallerPackageName(clientPackageName);
 #pragma warning restore CS0618
 
-        return installer is "com.android.vending" or "com.google.android.feedback";
+        return BrowseTree.IsPlayInstaller(installer);
     }
 
     // ==================================================================================
@@ -785,38 +679,15 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
     public void PlayQueue(IReadOnlyList<Song> queue, int index, bool autoPlay = true)
     {
-        _queue = queue.ToList();
-        BuildOrder(startAt: Math.Clamp(index, 0, Math.Max(_queue.Count - 1, 0)));
+        _queue.Load(queue, index);
         StartCurrent(autoPlay);
     }
 
     public void PlayFromMediaId(string? mediaId)
     {
-        if (mediaId is null || !mediaId.StartsWith(SongPrefix, StringComparison.Ordinal))
-            return;
-
-        var rest = mediaId[SongPrefix.Length..];
-        var separator = rest.IndexOf('|');
-        if (separator <= 0 || !long.TryParse(rest[..separator], out var songId))
-            return;
-
-        var contextId = rest[(separator + 1)..];
         var library = ServiceHelper.GetService<IMusicLibraryService>();
-        if (library is null)
-            return;
-
-        var queue = ResolveContextQueue(contextId, library);
-        var index = queue.FindIndex(song => song.Id == songId);
-        if (index < 0)
-        {
-            var single = library.FindById(songId);
-            if (single is null)
-                return;
-            queue = [single];
-            index = 0;
-        }
-
-        PlayQueue(queue, index);
+        if (library is not null && BrowseTree.QueueFor(mediaId, library, ServiceHelper.GetService<IPlaylistService>()) is { } pick)
+            PlayQueue(pick.Queue, pick.Index);
     }
 
     /// <summary>Reproduce lo que mejor case con lo que el usuario ha pedido por voz.</summary>
@@ -829,20 +700,6 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
         var queue = LibraryRules.ResolveVoiceQuery(library.Artists, library.Songs, query);
         if (queue.Count > 0)
             PlayQueue(queue, 0);
-    }
-
-    private List<Song> ResolveContextQueue(string contextId, IMusicLibraryService library)
-    {
-        if (contextId.StartsWith(ArtistPrefix, StringComparison.Ordinal))
-            return library.FindArtist(contextId[ArtistPrefix.Length..])?.Songs.ToList() ?? [];
-
-        if (contextId.StartsWith(PlaylistPrefix, StringComparison.Ordinal))
-        {
-            var playlist = ServiceHelper.GetService<IPlaylistService>()?.Find(contextId[PlaylistPrefix.Length..]);
-            return playlist is null ? [] : library.FindByIds(playlist.SongIds).ToList();
-        }
-
-        return library.Songs.ToList();
     }
 
     public void TogglePlayPause()
@@ -903,11 +760,8 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             return;
         }
 
-        if (_order.Count == 0)
-            return;
-
-        _orderIndex = QueueOrder.Previous(_orderIndex, _order.Count);
-        StartCurrent();
+        if (_queue.MovePrevious())
+            StartCurrent();
     }
 
     public void SeekTo(TimeSpan position)
@@ -927,7 +781,7 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     {
         AbandonAudioFocus();
         ReleasePlayer();
-        _orderIndex = -1;
+        _queue.Stop();
         LeaveForeground(removeNotification: true);
         PublishPlaybackState();
         StopSelf();
@@ -935,25 +789,21 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
 
     public void SetShuffle(bool enabled)
     {
-        if (Shuffle == enabled)
+        // Se rehace el orden dejando la cancion actual donde esta: cambiar el modo no debe cortar
+        // lo que esta sonando.
+        if (!_queue.SetShuffle(enabled))
             return;
-
-        Shuffle = enabled;
 
         var settings = ServiceHelper.GetService<ISettingsService>();
         if (settings is not null)
             settings.Shuffle = enabled;
 
-        // Se rehace el orden dejando la cancion actual donde esta: cambiar el modo no debe cortar
-        // lo que esta sonando.
-        var current = QueueIndex;
-        BuildOrder(startAt: current < 0 ? 0 : current);
         PublishPlaybackState();
     }
 
     public void SetRepeat(RepeatMode mode)
     {
-        Repeat = mode;
+        _queue.Repeat = mode;
 
         var settings = ServiceHelper.GetService<ISettingsService>();
         if (settings is not null)
@@ -965,12 +815,6 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     // ==================================================================================
     //  Motor
     // ==================================================================================
-
-    private void BuildOrder(int startAt)
-    {
-        // Barajado y orden en QueueOrder, que es codigo puro y tiene sus pruebas.
-        (_order, _orderIndex) = QueueOrder.Build(_queue.Count, startAt, Shuffle, Random.Shared);
-    }
 
     private void StartCurrent(bool autoPlay = true)
     {
@@ -1066,11 +910,10 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
     /// <summary>Pasa a la siguiente pista respetando el modo de repeticion.</summary>
     private void Advance(bool userRequested)
     {
-        if (_order.Count == 0)
+        if (_queue.IsEmpty)
             return;
 
-        var next = QueueOrder.Next(_orderIndex, _order.Count, Repeat, userRequested);
-        if (next is null)
+        if (!_queue.MoveNext(userRequested))
         {
             // Fin de la cola sin repeticion: se para, no se vuelve a empezar en silencio.
             Pause();
@@ -1078,7 +921,6 @@ public sealed class MusicService : MediaBrowserServiceCompat, AudioManager.IOnAu
             return;
         }
 
-        _orderIndex = next.Value;
         StartCurrent();
     }
 

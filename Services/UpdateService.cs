@@ -9,23 +9,38 @@ namespace MusicPlayer.Services;
 /// del proyecto (fuente de confianza) y, si hay una version mas reciente que la instalada, avisa al
 /// usuario y le propone actualizar. Es silenciosa y no bloqueante: sin red, o ya al dia, no molesta.
 /// </summary>
+/// <remarks>La red, la version instalada y el navegador llegan por delegados para poder probarla.</remarks>
 public sealed class UpdateService
 {
-    private const string AppcastUrl = "https://raw.githubusercontent.com/donki/MusicPlayer/main/appcast.json";
+    public const string AppcastUrl = "https://raw.githubusercontent.com/donki/MusicPlayer/main/appcast.json";
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(8) };
 
     private readonly ILocalizationService _localization;
     private readonly ILogger<UpdateService> _logger;
+    private readonly Func<Task<string>> _fetch;
+    private readonly Func<string> _currentVersion;
+    private readonly Func<string, Task> _open;
     private bool _checkedThisSession;
 
     public UpdateService(ILocalizationService localization, ILogger<UpdateService> logger)
+        : this(localization, logger, () => Http.GetStringAsync(AppcastUrl), () => AppInfo.Current.VersionString,
+            url => Browser.Default.OpenAsync(new Uri(url), BrowserLaunchMode.SystemPreferred))
+    {
+    }
+
+    public UpdateService(ILocalizationService localization, ILogger<UpdateService> logger,
+        Func<Task<string>> fetch, Func<string> currentVersion, Func<string, Task> open)
     {
         _localization = localization;
         _logger = logger;
+        _fetch = fetch;
+        _currentVersion = currentVersion;
+        _open = open;
     }
 
-    public async Task CheckAndPromptAsync(Page page)
+    /// <param name="ask">Pregunta (titulo, mensaje, aceptar, cancelar); en la app, ModernDialog.</param>
+    public async Task CheckAndPromptAsync(Func<string, string, string, string, Task<bool>> ask)
     {
         if (_checkedThisSession)
             return;
@@ -33,22 +48,21 @@ public sealed class UpdateService
 
         try
         {
-            var json = await Http.GetStringAsync(AppcastUrl);
-            var manifest = JsonSerializer.Deserialize<Appcast>(json);
+            var manifest = JsonSerializer.Deserialize<Appcast>(await _fetch());
             if (manifest?.Version is null)
                 return;
 
-            var current = AppInfo.Current.VersionString;
+            var current = _currentVersion();
             if (CompareVersions(manifest.Version, current) <= 0)
                 return;
 
-            var wantsUpdate = await SocShared.ModernDialog.AlertAsync(page,
+            var wantsUpdate = await ask(
                 _localization["UpdateAvailableTitle"],
                 _localization.Format("UpdateAvailableMessage", manifest.Version, current),
                 _localization["UpdateNow"], _localization["UpdateLater"]);
 
             if (wantsUpdate && !string.IsNullOrWhiteSpace(manifest.Url))
-                await Browser.Default.OpenAsync(new Uri(manifest.Url), BrowserLaunchMode.SystemPreferred);
+                await _open(manifest.Url);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException or UriFormatException)
         {
@@ -58,7 +72,7 @@ public sealed class UpdateService
     }
 
     /// <summary>Compara versiones numericas por partes («2026.08.27.0»). &gt;0 si a es mas nueva que b.</summary>
-    private static int CompareVersions(string first, string second)
+    public static int CompareVersions(string first, string second)
     {
         var left = Parts(first);
         var right = Parts(second);

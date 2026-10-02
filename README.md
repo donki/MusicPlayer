@@ -97,11 +97,14 @@ dotnet publish MusicPlayer.csproj -c Release -f net10.0-android36.0 `
 
 ### Pruebas automatizadas
 
-**181 pruebas** (xUnit), todas pasan · cobertura del código probado **99,5 %** de líneas (93 % de
-ramas) · sobre toda la app **25,2 %** (1 701 de ~6 740 líneas; el resto es interfaz MAUI y
-código de Android: reproductor, Android Auto, índice de medios) · el banco tarda **~7 s** (las
-búsquedas en línea respetan el límite de una petición por segundo de MusicBrainz). Medido el
-2026-09-30.
+**218 pruebas** (xUnit), todas pasan · cobertura del código probado **99,6 %** de líneas · sobre
+toda la app **37 %** (1 880 de 5 081 líneas ejecutables de C#: se cuentan las que mide coverlet en
+lo que compila el banco y, en el resto, las líneas con código, sin llaves solas, `using` ni
+comentarios; con el método anterior la 2026.09.30.0 salía con un 25 %, 34 % con el nuevo) · el
+banco tarda **~8 s** (las búsquedas en línea respetan el límite de una petición por segundo de
+MusicBrainz). Medido el 2026-10-02. **Mínimo de la constitución: 90 %**; lo que falta (el servicio
+de reproducción y el índice de medios de Android y las páginas) y el plan están en
+`12-TAREAS-MusicPlayer.md`.
 
 ```powershell
 dotnet test MusicPlayer.Tests
@@ -114,7 +117,9 @@ Se prueban la cola (orden, aleatorio, siguiente/anterior con cada repetición), 
 grupo o compositor, la búsqueda (buscador y voz), el completado de etiquetas, las listas y
 favoritas, las etiquetas corregidas, las letras (LRC, ID3v2 USLT/SYLT, FLAC), las carátulas
 propias, los ajustes, los idiomas y las búsquedas en línea (MusicBrainz, iTunes, Deezer,
-Wikidata, Wikipedia) contra un servidor de mentira: ninguna prueba sale a la red.
+Wikidata, Wikipedia) contra un servidor de mentira (ninguna prueba sale a la red), el árbol de
+Android Auto (qué cola suena al elegir una canción en el coche y quién puede navegar) y la
+comprobación de versión.
 
 ### Probar Android Auto
 

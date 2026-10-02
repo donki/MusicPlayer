@@ -2,6 +2,21 @@
 
 Todas las versiones siguen el esquema de fecha `AAAA.MM.DD.N` (constitución 11).
 
+## 2026.10.02.0
+
+- **Sustituye a la 2026.09.30.0**, que no llegó a publicarse en Play (había cambios en revisión).
+- **Cobertura: la lógica sale del servicio de Android** (constitución General §8.6, mínimo 90 % de
+  toda la app). El árbol de Android Auto (raíz, grupos, listas, canciones, qué cola suena al elegir
+  una canción y quién puede navegar) pasa a `BrowseTree`, y la cola de reproducción (orden,
+  aleatorio, repetición, siguiente y anterior) a `PlaybackQueue`; la comprobación de versión
+  también se prueba. Se comportan igual. Banco: 218 pruebas; cobertura de toda la app del 34 % al
+  37 % (con el método nuevo, que cuenta las líneas ejecutables de verdad; con el anterior salía un
+  25 %).
+- `appcast.json` anunciaba la 2026.08.27.0: ya anuncia esta versión.
+
+*English:* the Android Auto browse tree and the playback queue move out of the Android service into
+tested classes (same behaviour). 218 tests; whole-app coverage 34 % → 37 %.
+
 ## 2026.09.30.0
 
 - **Un grupo ya no sale dos veces por una mayúscula.** «Queen» y «queen» formaban dos tarjetas, pero

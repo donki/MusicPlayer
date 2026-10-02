@@ -32,6 +32,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Microsoft.Maui.Storage" />
+    <Using Include="Microsoft.Maui.ApplicationModel" />
   </ItemGroup>
 
   <!-- Codigo de la app que se prueba (enlazado, no copiado). -->
@@ -60,6 +61,9 @@
     <Compile Include="..\Services\SettingsService.cs" Link="App\Services\SettingsService.cs" />
     <Compile Include="..\Services\SongLookupService.cs" Link="App\Services\SongLookupService.cs" />
     <Compile Include="..\Services\SongTagsService.cs" Link="App\Services\SongTagsService.cs" />
+    <Compile Include="..\Services\BrowseTree.cs" Link="App\Services\BrowseTree.cs" />
+    <Compile Include="..\Services\PlaybackQueue.cs" Link="App\Services\PlaybackQueue.cs" />
+    <Compile Include="..\Services\UpdateService.cs" Link="App\Services\UpdateService.cs" />
   </ItemGroup>
 
 </Project>

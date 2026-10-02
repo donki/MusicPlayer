@@ -31,7 +31,7 @@ public enum DeleteOutcome
 /// Biblioteca musical del dispositivo: escaneo, agrupacion y borrado. Toda la logica vive aqui;
 /// las paginas solo la orquestan (constitucion 7).
 /// </summary>
-public interface IMusicLibraryService
+public interface IMusicLibraryService : IBrowseLibrary
 {
     /// <summary>Se dispara cuando cambia el contenido de la biblioteca (escaneo o borrado).</summary>
     event EventHandler? LibraryChanged;
